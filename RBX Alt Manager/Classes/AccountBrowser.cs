@@ -1,4 +1,4 @@
-﻿using CefSharp;
+using CefSharp;
 using CefSharp.WinForms;
 using Newtonsoft.Json.Linq;
 using PuppeteerExtraSharp;
@@ -433,9 +433,11 @@ namespace RBX_Alt_Manager.Classes
 
                         if (RSec != null)
                         {
-                            AccountManager.AddAccount(RSec.Value, Password);
-
-                            Cef.GetGlobalCookieManager().DeleteCookies();
+                            string tokenVal = RSec.Value?.Trim(' ', '"', '\'', '\r', '\n', '\t');
+                            if (!string.IsNullOrEmpty(tokenVal))
+                            {
+                                AccountManager.AddAccount(tokenVal, Password);
+                            }
 
                             this.InvokeIfRequired(() => Hide());
                         }

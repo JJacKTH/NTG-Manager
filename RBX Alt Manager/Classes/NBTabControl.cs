@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -154,20 +154,26 @@ namespace RBX_Alt_Manager.Classes
         {
             TabPage tp = TabPages[index];
             r = GetTabRect(index);
-            // r = new Rectangle((int)(r.X*Program.Scale), r.Y, (int)(r.Width * Program.Scale), (int)(r.Height * 1f));
             bool isSelected = index == SelectedIndex;
-            ButtonBorderStyle bs = index == SelectedIndex ? ButtonBorderStyle.Solid : ButtonBorderStyle.Solid;
 
-            PaintBrush.Color = tp.BackColor;
+            Color bg = isSelected ? Color.FromArgb(0x27, 0x27, 0x2A) : tp.BackColor;
+            Color fg = isSelected ? Color.FromArgb(0x63, 0x66, 0xF1) : tp.ForeColor;
+
+            PaintBrush.Color = bg;
             e.Graphics.FillRectangle(PaintBrush, r);
 
-            Color br = PaintBrush.Color.GetBrightness() < 0.4 ? ControlPaint.Light(PaintBrush.Color, isSelected ? 1f : 0.4f) : ControlPaint.Dark(PaintBrush.Color, isSelected ? 1f : 0.4f);
-            ControlPaint.DrawBorder(e.Graphics, r,
-                br, 1, bs,
-                br, 1, bs,
-                br, 1, bs,
-                br, 1, isSelected ? ButtonBorderStyle.None : bs);
-            PaintBrush.Color = tp.ForeColor;
+            if (isSelected)
+            {
+                using (Pen accentPen = new Pen(Color.FromArgb(0x63, 0x66, 0xF1), 3))
+                {
+                    if (Alignment == TabAlignment.Left)
+                        e.Graphics.DrawLine(accentPen, r.Left + 2, r.Top + 2, r.Left + 2, r.Bottom - 2);
+                    else
+                        e.Graphics.DrawLine(accentPen, r.Left + 2, r.Bottom - 2, r.Right - 2, r.Bottom - 2);
+                }
+            }
+
+            PaintBrush.Color = fg;
 
             if (Alignment == TabAlignment.Left || Alignment == TabAlignment.Right)
             {

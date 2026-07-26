@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RBX_Alt_Manager.Classes;
 using RBX_Alt_Manager.Forms;
@@ -90,6 +90,10 @@ namespace RBX_Alt_Manager
 
         public Account(string Cookie, string AccountJSON = null)
         {
+            if (!string.IsNullOrEmpty(Cookie))
+            {
+                Cookie = Cookie.Trim(' ', '"', '\'', '\r', '\n', '\t');
+            }
             SecurityToken = Cookie;
             
             AccountJSON ??= AccountManager.MainClient.Execute(MakeRequest("my/account/json", Method.Get)).Content;
@@ -107,60 +111,107 @@ namespace RBX_Alt_Manager
             }
         }
 
-        public RestRequest MakeRequest(string url, Method method = Method.Get) => new RestRequest(url, method).AddCookie(".ROBLOSECURITY", SecurityToken, "/", ".roblox.com");
+        public RestRequest MakeRequest(string url, Method method = Method.Get)
+        {
+            var req = new RestRequest(url, method);
+            string token = SecurityToken?.Trim(' ', '"', '\'', '\r', '\n', '\t');
+            if (!string.IsNullOrEmpty(token))
+            {
+                req.AddCookie(".ROBLOSECURITY", token, "/", ".roblox.com");
+                req.AddCookie(".ROBLOSECURITY", token, "/", "auth.roblox.com");
+                req.AddHeader("Cookie", $".ROBLOSECURITY={token}");
+            }
+            req.AddHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            return req;
+        }
 
         public bool GetAuthTicket(out string Ticket)
         {
             Ticket = string.Empty;
 
-            if (!GetCSRFToken(out string Token)) return false;
+            if (!GetCSRFToken(out string Token))
+            {
+                Program.Logger.Error($"GetAuthTicket: GetCSRFToken failed for account {Username}.");
+                return false;
+            }
 
-            RestRequest request = MakeRequest("/v1/authentication-ticket/", Method.Post).AddHeader("X-CSRF-TOKEN", Token).AddHeader("Referer", "https://www.roblox.com/games/4924922222/Brookhaven-RP");
+            RestRequest request = MakeRequest("v1/authentication-ticket", Method.Post)
+                .AddHeader("X-CSRF-TOKEN", Token)
+                .AddHeader("Origin", "https://www.roblox.com")
+                .AddHeader("Referer", "https://www.roblox.com/")
+                .AddHeader("RBXAuthenticationNegotiation", "1")
+                .AddJsonBody(new { });
 
             RestResponse response = AccountManager.AuthClient.Execute(request);
 
-            Parameter TicketHeader = response.Headers.FirstOrDefault(x => x.Name == "rbx-authentication-ticket");
+            var TicketHeader = response.Headers?.FirstOrDefault(x => string.Equals(x.Name, "rbx-authentication-ticket", StringComparison.OrdinalIgnoreCase));
 
-            if (TicketHeader != null)
+            if (TicketHeader != null && TicketHeader.Value != null)
             {
-                Ticket = (string)TicketHeader.Value;
-
+                Ticket = TicketHeader.Value.ToString();
                 return true;
             }
 
+            if (!string.IsNullOrEmpty(response.Content) && response.Content.Contains("authTicket"))
+            {
+                try
+                {
+                    Newtonsoft.Json.Linq.JObject obj = Newtonsoft.Json.Linq.JObject.Parse(response.Content);
+                    if (obj["authTicket"] != null)
+                    {
+                        Ticket = obj["authTicket"].ToString();
+                        return true;
+                    }
+                }
+                catch { }
+            }
+
+            Program.Logger.Error($"GetAuthTicket failed for {Username}: StatusCode={response.StatusCode}, Content={response.Content}");
+            Ticket = $"[{(int)response.StatusCode} {response.StatusCode}] {response.Content}";
             return false;
         }
 
         public bool GetCSRFToken(out string Result)
         {
-            RestRequest request = MakeRequest("v1/authentication-ticket/", Method.Post).AddHeader("Referer", "https://www.roblox.com/games/4924922222/Brookhaven-RP");
+            Result = string.Empty;
 
-            RestResponse response = AccountManager.AuthClient.Execute(request);
-
-            if (response.StatusCode != HttpStatusCode.Forbidden)
+            if (string.IsNullOrEmpty(SecurityToken))
             {
-                Result = $"[{(int)response.StatusCode} {response.StatusCode}] {response.Content}";
+                Program.Logger.Error("GetCSRFToken failed: SecurityToken is null or empty.");
                 return false;
             }
 
-            Parameter result = response.Headers.FirstOrDefault(x => x.Name == "x-csrf-token");
+            RestRequest request = MakeRequest("v1/authentication-ticket", Method.Post)
+                .AddHeader("Origin", "https://www.roblox.com")
+                .AddHeader("Referer", "https://www.roblox.com/")
+                .AddJsonBody(new { });
 
-            string Token = string.Empty;
+            RestResponse response = AccountManager.AuthClient.Execute(request);
 
-            if (result != null)
+            var result = response.Headers?.FirstOrDefault(x => string.Equals(x.Name, "x-csrf-token", StringComparison.OrdinalIgnoreCase));
+
+            if (result != null && result.Value != null)
             {
-                Token = (string)result.Value;
-                LastUse = DateTime.Now;
-
-                AccountManager.LastValidAccount = this;
-                AccountManager.SaveAccounts();
+                string Token = result.Value.ToString();
+                if (!string.IsNullOrEmpty(Token))
+                {
+                    LastUse = DateTime.Now;
+                    AccountManager.LastValidAccount = this;
+                    CSRFToken = Token;
+                    TokenSet = DateTime.Now;
+                    Result = Token;
+                    return true;
+                }
             }
 
-            CSRFToken = Token;
-            TokenSet = DateTime.Now;
-            Result = Token;
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                this.Valid = false;
+            }
 
-            return !string.IsNullOrEmpty(Result);
+            Program.Logger.Error($"GetCSRFToken failed for {Username}: StatusCode={response.StatusCode}, Content={response.Content}");
+            Result = $"[{(int)response.StatusCode} {response.StatusCode}] {response.Content}";
+            return false;
         }
 
         public bool CheckPin(bool Internal = false)
@@ -646,7 +697,10 @@ namespace RBX_Alt_Manager
                     {
                         try
                         {
-                            ProcessStartInfo LaunchInfo = new ProcessStartInfo();
+                            ProcessStartInfo LaunchInfo = new ProcessStartInfo()
+                            {
+                                UseShellExecute = true
+                            };
 
                             if (JoinVIP)
                                 LaunchInfo.FileName = $"roblox-player:1+launchmode:play+gameinfo:{Ticket}+launchtime:{LaunchTime}+placelauncherurl:{HttpUtility.UrlEncode($"https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=RequestPrivateGame&placeId={PlaceID}&accessCode={AccessCode}&linkCode={LinkCode}")}+browsertrackerid:{BrowserTrackerID}+robloxLocale:en_us+gameLocale:en_us+channel:+LaunchExp:InApp";

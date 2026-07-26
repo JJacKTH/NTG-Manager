@@ -1,4 +1,4 @@
-﻿using RBX_Alt_Manager.Classes;
+using RBX_Alt_Manager.Classes;
 
 namespace RBX_Alt_Manager
 {
@@ -683,31 +683,31 @@ namespace RBX_Alt_Manager
             this.AccountsView.Scroll += new System.EventHandler<System.Windows.Forms.ScrollEventArgs>(this.AccountsView_Scroll);
             this.AccountsView.SelectedIndexChanged += new System.EventHandler(this.AccountsView_SelectedIndexChanged);
             // 
-            // Username
+            // Username (Column 0: Row Index #)
             // 
-            this.Username.AspectName = "Username";
+            this.Username.AspectName = "";
             this.Username.IsEditable = false;
             this.Username.Sortable = false;
-            this.Username.Text = "Username";
-            this.Username.Width = 130;
+            this.Username.Text = "#";
+            this.Username.Width = 50;
             // 
-            // AccountAlias
+            // AccountAlias (Column 1: Avatar & Username)
             // 
-            this.AccountAlias.AspectName = "Alias";
-            this.AccountAlias.Text = "Alias";
-            this.AccountAlias.Width = 120;
+            this.AccountAlias.AspectName = "Username";
+            this.AccountAlias.Text = "Avatar & Username";
+            this.AccountAlias.Width = 220;
             // 
-            // Description
+            // Description (Column 2: Status)
             // 
-            this.Description.AspectName = "Description";
-            this.Description.Text = "Description";
-            this.Description.Width = 200;
+            this.Description.AspectName = "Valid";
+            this.Description.Text = "Status";
+            this.Description.Width = 140;
             // 
-            // Group
+            // Group (Column 3: Description)
             // 
-            this.Group.AspectName = "Group";
-            this.Group.Text = "";
-            this.Group.Width = 0;
+            this.Group.AspectName = "Description";
+            this.Group.Text = "Description (Stats & Details)";
+            this.Group.Width = 400;
             // 
             // LastUsedColumn
             // 

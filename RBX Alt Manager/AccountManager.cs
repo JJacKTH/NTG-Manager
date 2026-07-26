@@ -1,3 +1,6 @@
+using TaskDialog = Microsoft.WindowsAPICodePack.Dialogs.TaskDialog;
+using TaskDialogButton = Microsoft.WindowsAPICodePack.Dialogs.TaskDialogButton;
+using Point = System.Drawing.Point;
 using BrightIdeasSoftware;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Win32;
@@ -94,6 +97,15 @@ namespace RBX_Alt_Manager
 
         [DllImport("DwmApi")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, int[] attrValue, int attrSize);
+
+        [DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        [DllImport("gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
+        public static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
 
         public static void SetDarkBar(IntPtr Handle)
         {
@@ -670,6 +682,7 @@ namespace RBX_Alt_Manager
                 ResetEncryption();
 
             ApplyTheme();
+            SetupModernDashboardLayout();
 
             RGForm.RecentGameSelected += (sender, e) => { PlaceID.Text = e.Game.Details?.placeId.ToString(); };
 
@@ -1418,6 +1431,12 @@ namespace RBX_Alt_Manager
 
         private void AccountsView_SelectedIndexChanged(object sender, EventArgs e)
         {
+            int selectedCount = AccountsView.SelectedObjects?.Count ?? 0;
+            if (statusSummaryBadge != null)
+            {
+                statusSummaryBadge.Text = string.Format(LanguageManager.GetText("StatusReady"), selectedCount);
+            }
+
             if (AccountsView.SelectedItems.Count != 1)
             {
                 SelectedAccount = null;
@@ -1974,12 +1993,11 @@ namespace RBX_Alt_Manager
             ThemeForm.Show();
         }
 
-        private void LaunchNexus_Click(object sender, EventArgs e)
+        public void OpenAccountControlForm()
         {
-            if (ControlForm != null)
+            if (ControlForm != null && !ControlForm.IsDisposed)
             {
-                ControlForm.Top = Bottom;
-                ControlForm.Left = Left;
+                ControlForm.WindowState = FormWindowState.Normal;
                 ControlForm.Show();
                 ControlForm.BringToFront();
             }
@@ -1987,13 +2005,17 @@ namespace RBX_Alt_Manager
             {
                 ControlForm = new AccountControl
                 {
-                    StartPosition = FormStartPosition.Manual,
-                    Top = Bottom,
-                    Left = Left
+                    StartPosition = FormStartPosition.CenterScreen
                 };
                 ControlForm.Show();
                 ControlForm.ApplyTheme();
+            SetupModernDashboardLayout();
             }
+        }
+
+        private void LaunchNexus_Click(object sender, EventArgs e)
+        {
+            OpenAccountControlForm();
         }
 
         private async Task LaunchAccounts(List<Account> Accounts, long PlaceID, string JobID, bool FollowUser = false, bool VIPServer = false)
@@ -2178,6 +2200,765 @@ namespace RBX_Alt_Manager
         private void PlaceID_Click( object sender, EventArgs e )
         {
             PlaceID.SelectAll(); // Allows quick replacing of the PlaceID with a click and ctrl-v.
+        }
+    
+        private Panel mainSidebarPanel;
+        private Panel topHeaderPanel;
+        private Panel kpiRowPanel;
+        private Label brandTitleLabel;
+        private Label brandTagLabel;
+        private Button langSwitchBtn;
+        private Label statusSummaryBadge;
+        private TextBox globalSearchBox;
+        private Panel rightDetailsCard;
+        private Button mainLaunchButton;
+        private Button deleteSelectedButton;
+        private Button addAccountButton;
+        private Button refreshAvatarsButton;
+        private Label kpiTotalAccountsVal;
+        private Label kpiFarmingVal;
+        private Label kpiRobuxVal;
+        private Label kpiDeadVal;
+
+        private Label lblMenuMain;
+        private Label lblMenuSystem;
+        private Button navAccountsBtn;
+        private Button navServerBtn;
+        private Button navUtilsBtn;
+        private Button navSettingsBtn;
+        private Button navSecurityBtn;
+
+        private Label cardTitleLabel;
+        private Label lblPlaceID;
+        private Label lblJobID;
+        private Label lblAlias;
+        private Label lblDescription;
+
+        private bool isModernLayoutBuilt = false;
+
+        private void SetupModernDashboardLayout()
+        {
+            if (isModernLayoutBuilt) return;
+            isModernLayoutBuilt = true;
+            try
+            {
+                this.FormBorderStyle = FormBorderStyle.None;
+                this.Size = new Size(1280, 820);
+                this.MinimumSize = new Size(1020, 680);
+                this.Text = "NTG Manager 2026 - Modern Glassmorphism";
+                this.BackColor = Color.FromArgb(8, 9, 15);
+                this.ForeColor = Color.FromArgb(240, 243, 254);
+
+                try
+                {
+                    this.Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 20, 20));
+                }
+                catch { }
+
+                this.Resize += (s, e) =>
+                {
+                    try { this.Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 20, 20)); } catch { }
+                };
+
+                MouseEventHandler titleDragDown = (s, e) =>
+                {
+                    if (e.Button == MouseButtons.Left)
+                    {
+                        ReleaseCapture();
+                        SendMessage(this.Handle, 0xA1, 0x2, 0);
+                    }
+                };
+
+                // Set custom NTG 4-column renderer for AccountsView
+                NTGAccountRenderer ntgRenderer = new NTGAccountRenderer();
+                Username.Renderer = ntgRenderer;
+                AccountAlias.Renderer = ntgRenderer;
+                Description.Renderer = ntgRenderer;
+                Group.Renderer = ntgRenderer;
+                AccountsView.RowHeight = 52;
+                AccountsView.OwnerDraw = true;
+
+                // 1. Top Header Bar
+                topHeaderPanel = new Panel()
+                {
+                    Dock = DockStyle.Top,
+                    Height = 60,
+                    BackColor = Color.FromArgb(13, 16, 26),
+                    Padding = new Padding(20, 10, 20, 10)
+                };
+                topHeaderPanel.MouseDown += titleDragDown;
+
+                Panel brandPanel = new Panel()
+                {
+                    Location = new Point(15, 10),
+                    Size = new Size(360, 40),
+                    BackColor = Color.Transparent
+                };
+                brandPanel.MouseDown += titleDragDown;
+
+                Panel logoBox = new Panel()
+                {
+                    Size = new Size(38, 38),
+                    Location = new Point(0, 1),
+                    BackColor = Color.FromArgb(0, 242, 254)
+                };
+                Label logoText = new Label()
+                {
+                    Text = "NTG",
+                    Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                    ForeColor = Color.Black,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleCenter
+                };
+                logoBox.Controls.Add(logoText);
+
+                brandTitleLabel = new Label()
+                {
+                    Text = LanguageManager.GetText("AppTitle"),
+                    Font = new Font("Segoe UI", 13F, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    Location = new Point(48, 8),
+                    AutoSize = true
+                };
+                brandTitleLabel.MouseDown += titleDragDown;
+
+                brandTagLabel = new Label()
+                {
+                    Text = LanguageManager.GetText("BrandTag"),
+                    Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(0, 242, 254),
+                    BackColor = Color.FromArgb(30, 0, 242, 254),
+                    Location = new Point(230, 12),
+                    Padding = new Padding(5, 2, 5, 2),
+                    AutoSize = true
+                };
+                brandTagLabel.MouseDown += titleDragDown;
+
+                brandPanel.Controls.Add(logoBox);
+                brandPanel.Controls.Add(brandTitleLabel);
+                brandPanel.Controls.Add(brandTagLabel);
+
+                // Language Switcher Button
+                langSwitchBtn = new Button()
+                {
+                    Text = LanguageManager.GetText("LangButton"),
+                    Size = new Size(130, 32),
+                    Location = new Point(topHeaderPanel.Width - 280, 14),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    BackColor = Color.FromArgb(25, 30, 48),
+                    ForeColor = Color.FromArgb(0, 242, 254),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                langSwitchBtn.FlatAppearance.BorderColor = Color.FromArgb(60, 0, 242, 254);
+                langSwitchBtn.Click += (s, e) =>
+                {
+                    LanguageManager.ToggleLanguage();
+                    UpdateLanguageStrings();
+                };
+
+                // Settings Toggle Button ⚙️
+                Button settingsToggleBtn = new Button()
+                {
+                    Text = "⚙️",
+                    Size = new Size(32, 32),
+                    Location = new Point(topHeaderPanel.Width - 145, 14),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    BackColor = Color.FromArgb(25, 30, 48),
+                    ForeColor = Color.FromArgb(180, 190, 220),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                settingsToggleBtn.FlatAppearance.BorderColor = Color.FromArgb(40, 255, 255, 255);
+                settingsToggleBtn.Click += (s, e) => rightDetailsCard.Visible = !rightDetailsCard.Visible;
+
+                // Custom Window Controls (Minimize, Maximize, Close)
+                Panel windowControls = new Panel()
+                {
+                    Size = new Size(100, 32),
+                    Location = new Point(topHeaderPanel.Width - 105, 14),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    BackColor = Color.Transparent
+                };
+
+                Button btnMin = new Button()
+                {
+                    Text = "─",
+                    Size = new Size(30, 30),
+                    Location = new Point(0, 0),
+                    FlatStyle = FlatStyle.Flat,
+                    ForeColor = Color.FromArgb(180, 190, 220),
+                    BackColor = Color.FromArgb(25, 30, 48),
+                    Cursor = Cursors.Hand,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+                };
+                btnMin.FlatAppearance.BorderSize = 0;
+                btnMin.Click += (s, e) => this.WindowState = FormWindowState.Minimized;
+
+                Button btnMax = new Button()
+                {
+                    Text = "❐",
+                    Size = new Size(30, 30),
+                    Location = new Point(34, 0),
+                    FlatStyle = FlatStyle.Flat,
+                    ForeColor = Color.FromArgb(180, 190, 220),
+                    BackColor = Color.FromArgb(25, 30, 48),
+                    Cursor = Cursors.Hand,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+                };
+                btnMax.FlatAppearance.BorderSize = 0;
+                btnMax.Click += (s, e) => this.WindowState = (this.WindowState == FormWindowState.Maximized) ? FormWindowState.Normal : FormWindowState.Maximized;
+
+                Button btnClose = new Button()
+                {
+                    Text = "✕",
+                    Size = new Size(30, 30),
+                    Location = new Point(68, 0),
+                    FlatStyle = FlatStyle.Flat,
+                    ForeColor = Color.White,
+                    BackColor = Color.FromArgb(220, 30, 70),
+                    Cursor = Cursors.Hand,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+                };
+                btnClose.FlatAppearance.BorderSize = 0;
+                btnClose.Click += (s, e) => this.Close();
+
+                windowControls.Controls.Add(btnMin);
+                windowControls.Controls.Add(btnMax);
+                windowControls.Controls.Add(btnClose);
+
+                topHeaderPanel.Controls.Add(brandPanel);
+                topHeaderPanel.Controls.Add(langSwitchBtn);
+                topHeaderPanel.Controls.Add(settingsToggleBtn);
+                topHeaderPanel.Controls.Add(windowControls);
+
+                // 2. Left Sidebar Navigation
+                mainSidebarPanel = new Panel()
+                {
+                    Dock = DockStyle.Left,
+                    Width = 210,
+                    BackColor = Color.FromArgb(10, 12, 20),
+                    Padding = new Padding(12)
+                };
+
+                lblMenuMain = new Label()
+                {
+                    Text = LanguageManager.GetText("MenuMain"),
+                    Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(123, 132, 163),
+                    Location = new Point(12, 15),
+                    AutoSize = true
+                };
+
+                navAccountsBtn = CreateNavButton(LanguageManager.GetText("NavAccounts"), 38, true);
+                navServerBtn = CreateNavButton(LanguageManager.GetText("NavGames"), 80, false);
+                navUtilsBtn = CreateNavButton(LanguageManager.GetText("NavAutoJoiner"), 122, false);
+                Button navVipBtn = CreateNavButton(LanguageManager.GetText("NavVipServers"), 164, false);
+
+                lblMenuSystem = new Label()
+                {
+                    Text = LanguageManager.GetText("MenuSystem"),
+                    Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(123, 132, 163),
+                    Location = new Point(12, 220),
+                    AutoSize = true
+                };
+
+                navSecurityBtn = CreateNavButton(LanguageManager.GetText("NavSecurity"), 243, false);
+                navSettingsBtn = CreateNavButton(LanguageManager.GetText("NavSettings"), 285, false);
+
+                navAccountsBtn.Click += (s, e) => ResetNavButtons(navAccountsBtn);
+                navServerBtn.Click += (s, e) => { ResetNavButtons(navServerBtn); ServerList_Click(s, e); };
+                navUtilsBtn.Click += (s, e) => { ResetNavButtons(navUtilsBtn); ConfigButton_Click(s, e); };
+                navSettingsBtn.Click += (s, e) => { ResetNavButtons(navSettingsBtn); EditTheme_Click(s, e); };
+                navSecurityBtn.Click += (s, e) => { ResetNavButtons(navSecurityBtn); ConfigButton_Click(s, e); };
+
+                mainSidebarPanel.Controls.Add(lblMenuMain);
+                mainSidebarPanel.Controls.Add(navAccountsBtn);
+                mainSidebarPanel.Controls.Add(navServerBtn);
+                mainSidebarPanel.Controls.Add(navUtilsBtn);
+                mainSidebarPanel.Controls.Add(navVipBtn);
+                mainSidebarPanel.Controls.Add(lblMenuSystem);
+                mainSidebarPanel.Controls.Add(navSecurityBtn);
+                mainSidebarPanel.Controls.Add(navSettingsBtn);
+
+                // 3. Right Details & Quick Launch Card Panel
+                rightDetailsCard = new Panel()
+                {
+                    Dock = DockStyle.Right,
+                    Width = 320,
+                    BackColor = Color.FromArgb(13, 16, 26),
+                    Padding = new Padding(16),
+                    Visible = false
+                };
+
+                cardTitleLabel = new Label()
+                {
+                    Text = "โก Quick Launch & Details",
+                    ForeColor = Color.FromArgb(240, 243, 254),
+                    Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                    AutoSize = true,
+                    Location = new Point(16, 16)
+                };
+
+                mainLaunchButton = new Button()
+                {
+                    Text = LanguageManager.GetText("BtnLaunch"),
+                    Size = new Size(288, 44),
+                    Location = new Point(16, 50),
+                    BackColor = Color.FromArgb(0, 242, 254),
+                    ForeColor = Color.Black,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                mainLaunchButton.FlatAppearance.BorderSize = 0;
+                mainLaunchButton.Click += (s, e) => JoinServer_Click(s, e);
+
+                lblPlaceID = new Label() { Text = LanguageManager.GetText("LabelPlaceID"), ForeColor = Color.FromArgb(123, 132, 163), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Location = new Point(16, 105), AutoSize = true };
+                lblJobID = new Label() { Text = LanguageManager.GetText("LabelJobID"), ForeColor = Color.FromArgb(123, 132, 163), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Location = new Point(16, 155), AutoSize = true };
+                lblAlias = new Label() { Text = LanguageManager.GetText("LabelAlias"), ForeColor = Color.FromArgb(123, 132, 163), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Location = new Point(16, 205), AutoSize = true };
+                lblDescription = new Label() { Text = LanguageManager.GetText("LabelDescription"), ForeColor = Color.FromArgb(123, 132, 163), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold), Location = new Point(16, 255), AutoSize = true };
+
+                rightDetailsCard.Controls.Add(cardTitleLabel);
+                rightDetailsCard.Controls.Add(mainLaunchButton);
+                rightDetailsCard.Controls.Add(lblPlaceID);
+                rightDetailsCard.Controls.Add(lblJobID);
+                rightDetailsCard.Controls.Add(lblAlias);
+                rightDetailsCard.Controls.Add(lblDescription);
+
+                // Relocate fields into Right Panel Card
+                PlaceID.Parent = rightDetailsCard;
+                PlaceID.Location = new Point(16, 125);
+                PlaceID.Width = 288;
+
+                JobID.Parent = rightDetailsCard;
+                JobID.Location = new Point(16, 175);
+                JobID.Width = 288;
+
+                Alias.Parent = rightDetailsCard;
+                Alias.Location = new Point(16, 225);
+                Alias.Width = 288;
+
+                DescriptionBox.Parent = rightDetailsCard;
+                DescriptionBox.Location = new Point(16, 275);
+                DescriptionBox.Size = new Size(288, 100);
+
+                SetAlias.Parent = rightDetailsCard;
+                SetAlias.Location = new Point(16, 385);
+                SetAlias.Width = 140;
+                SetAlias.Text = LanguageManager.GetText("BtnSaveAlias");
+
+                SetDescription.Parent = rightDetailsCard;
+                SetDescription.Location = new Point(164, 385);
+                SetDescription.Width = 140;
+                SetDescription.Text = LanguageManager.GetText("BtnSaveDesc");
+
+                OpenBrowser.Parent = rightDetailsCard;
+                OpenBrowser.Location = new Point(16, 430);
+                OpenBrowser.Size = new Size(288, 36);
+                OpenBrowser.BackColor = Color.FromArgb(123, 44, 191);
+                OpenBrowser.ForeColor = Color.White;
+                OpenBrowser.FlatStyle = FlatStyle.Flat;
+                OpenBrowser.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                OpenBrowser.Text = LanguageManager.GetText("BtnOpenBrowser");
+
+                Button saveAllBtn = new Button()
+                {
+                    Text = "💾 บันทึกข้อมูลไอดี (Save All)",
+                    Size = new Size(288, 36),
+                    Location = new Point(16, 472),
+                    BackColor = Color.FromArgb(0, 230, 118),
+                    ForeColor = Color.Black,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                saveAllBtn.FlatAppearance.BorderSize = 0;
+                saveAllBtn.Click += (s, e) =>
+                {
+                    if (!string.IsNullOrEmpty(PlaceID.Text)) General.Set("SavedPlaceId", PlaceID.Text);
+                    var targets = AccountsView.SelectedObjects?.Cast<Account>().ToList();
+                    if (targets != null && targets.Count > 0)
+                    {
+                        foreach (Account acc in targets)
+                        {
+                            acc.Alias = Alias.Text;
+                            acc.Description = DescriptionBox.Text;
+                            if (!string.IsNullOrEmpty(PlaceID.Text)) acc.SetField("SavedPlaceId", PlaceID.Text);
+                            if (!string.IsNullOrEmpty(JobID.Text)) acc.SetField("SavedJobId", JobID.Text);
+                        }
+                    }
+                    else if (SelectedAccount != null)
+                    {
+                        SelectedAccount.Alias = Alias.Text;
+                        SelectedAccount.Description = DescriptionBox.Text;
+                        if (!string.IsNullOrEmpty(PlaceID.Text)) SelectedAccount.SetField("SavedPlaceId", PlaceID.Text);
+                        if (!string.IsNullOrEmpty(JobID.Text)) SelectedAccount.SetField("SavedJobId", JobID.Text);
+                    }
+                    SaveAccounts();
+                    RefreshView();
+                    MessageBox.Show("บันทึกข้อมูล Place ID, Job ID, Alias และ Description เรียบร้อยแล้ว!", "บันทึกสำเร็จ", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                };
+
+                Button rightControlBtn = new Button()
+                {
+                    Text = "🎛️ Account Control",
+                    Size = new Size(288, 36),
+                    Location = new Point(16, 514),
+                    BackColor = Color.FromArgb(25, 45, 75),
+                    ForeColor = Color.FromArgb(140, 220, 255),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                rightControlBtn.FlatAppearance.BorderColor = Color.FromArgb(60, 140, 220, 255);
+                rightControlBtn.Click += (s, e) => OpenAccountControlForm();
+
+                Button rightUtilsBtn = new Button()
+                {
+                    Text = "🛠️ Account Utility",
+                    Size = new Size(288, 36),
+                    Location = new Point(16, 556),
+                    BackColor = Color.FromArgb(30, 38, 60),
+                    ForeColor = Color.FromArgb(0, 242, 254),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                rightUtilsBtn.FlatAppearance.BorderColor = Color.FromArgb(60, 0, 242, 254);
+                rightUtilsBtn.Click += (s, e) =>
+                {
+                    UtilsForm.Show();
+                    UtilsForm.WindowState = FormWindowState.Normal;
+                    UtilsForm.BringToFront();
+                };
+
+                rightDetailsCard.Controls.Add(saveAllBtn);
+                rightDetailsCard.Controls.Add(rightControlBtn);
+                rightDetailsCard.Controls.Add(rightUtilsBtn);
+
+                // 4. Center Content Panel (KPI Cards & Table)
+                Panel centerContentPanel = new Panel()
+                {
+                    Dock = DockStyle.Fill,
+                    BackColor = Color.FromArgb(8, 9, 15),
+                    Padding = new Padding(16)
+                };
+
+                // Top KPI Summary Row
+                kpiRowPanel = new Panel()
+                {
+                    Dock = DockStyle.Top,
+                    Height = 75,
+                    BackColor = Color.Transparent,
+                    Padding = new Padding(0, 0, 0, 10)
+                };
+
+                TableLayoutPanel kpiGrid = new TableLayoutPanel()
+                {
+                    Dock = DockStyle.Fill,
+                    ColumnCount = 2,
+                    RowCount = 1
+                };
+                kpiGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+                kpiGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+
+                Panel kpi1 = CreateKpiCard("👥", LanguageManager.GetText("KpiTotalAccounts"), $"{AccountsList?.Count ?? 0} Accounts", Color.FromArgb(0, 242, 254), out kpiTotalAccountsVal);
+                Panel kpi2 = CreateKpiCard("🔄", LanguageManager.GetText("KpiFarmingActive"), "0 Farming", Color.FromArgb(0, 230, 118), out kpiFarmingVal);
+
+                kpiGrid.Controls.Add(kpi1, 0, 0);
+                kpiGrid.Controls.Add(kpi2, 1, 0);
+                kpiRowPanel.Controls.Add(kpiGrid);
+
+                // Table Control Header Bar
+                Panel tableActionHeader = new Panel()
+                {
+                    Dock = DockStyle.Top,
+                    Height = 44,
+                    BackColor = Color.Transparent,
+                    Padding = new Padding(0, 5, 0, 5)
+                };
+
+                globalSearchBox = new TextBox()
+                {
+                    PlaceholderText = LanguageManager.GetText("BtnSearchPlaceholder"),
+                    Width = 260,
+                    Height = 32,
+                    BackColor = Color.FromArgb(16, 20, 32),
+                    ForeColor = Color.FromArgb(240, 243, 254),
+                    BorderStyle = BorderStyle.FixedSingle,
+                    Location = new Point(0, 5),
+                    Font = new Font("Segoe UI", 9F)
+                };
+                globalSearchBox.TextChanged += (s, e) =>
+                {
+                    if (AccountsView != null && !string.IsNullOrEmpty(globalSearchBox.Text))
+                    {
+                        var query = globalSearchBox.Text.ToLower();
+                        var match = AccountsList?.FirstOrDefault(a => (a.Username != null && a.Username.ToLower().Contains(query)) || (a.Alias != null && a.Alias.ToLower().Contains(query)) || (a.Description != null && a.Description.ToLower().Contains(query)));
+                        if (match != null) AccountsView.SelectObject(match, true);
+                    }
+                };
+
+                refreshAvatarsButton = new Button()
+                {
+                    Text = LanguageManager.GetText("BtnRefreshAvatars"),
+                    Size = new Size(130, 32),
+                    Location = new Point(tableActionHeader.Width - 280, 5),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    BackColor = Color.FromArgb(25, 30, 48),
+                    ForeColor = Color.FromArgb(240, 243, 254),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                refreshAvatarsButton.FlatAppearance.BorderColor = Color.FromArgb(40, 255, 255, 255);
+                refreshAvatarsButton.Click += (s, e) => AccountsView.Invalidate();
+
+                addAccountButton = new Button()
+                {
+                    Text = LanguageManager.GetText("BtnAddAccount"),
+                    Size = new Size(145, 32),
+                    Location = new Point(tableActionHeader.Width - 145, 5),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    BackColor = Color.FromArgb(0, 242, 254),
+                    ForeColor = Color.Black,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                addAccountButton.FlatAppearance.BorderSize = 0;
+                addAccountButton.Click += (s, e) => AddAccountsStrip.Show(addAccountButton, new Point(0, addAccountButton.Height));
+
+                tableActionHeader.Controls.Add(globalSearchBox);
+                tableActionHeader.Controls.Add(refreshAvatarsButton);
+                tableActionHeader.Controls.Add(addAccountButton);
+
+                // 5. Bottom Action Footer Bar
+                Panel bottomActionFooterPanel = new Panel()
+                {
+                    Dock = DockStyle.Bottom,
+                    Height = 56,
+                    BackColor = Color.FromArgb(8, 9, 15),
+                    Padding = new Padding(16, 8, 16, 8)
+                };
+
+                deleteSelectedButton = new Button()
+                {
+                    Text = LanguageManager.GetText("BtnDeleteSelected"),
+                    Size = new Size(150, 38),
+                    Location = new Point(16, 8),
+                    BackColor = Color.FromArgb(35, 10, 25),
+                    ForeColor = Color.FromArgb(255, 0, 85),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                deleteSelectedButton.FlatAppearance.BorderColor = Color.FromArgb(80, 255, 0, 85);
+                deleteSelectedButton.Click += (s, e) => Remove_Click(s, e);
+
+                mainLaunchButton = new Button()
+                {
+                    Text = LanguageManager.GetText("BtnLaunch"),
+                    Size = new Size(200, 38),
+                    Location = new Point(180, 8),
+                    BackColor = Color.FromArgb(0, 242, 254),
+                    ForeColor = Color.Black,
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                mainLaunchButton.FlatAppearance.BorderSize = 0;
+                mainLaunchButton.Click += (s, e) => JoinServer_Click(s, e);
+
+                statusSummaryBadge = new Label()
+                {
+                    Text = string.Format(LanguageManager.GetText("StatusReady"), AccountsView?.SelectedObjects?.Count ?? 0),
+                    Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                    ForeColor = Color.FromArgb(0, 230, 118),
+                    AutoSize = true,
+                    Location = new Point(bottomActionFooterPanel.Width - 280, 18),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right
+                };
+
+                bottomActionFooterPanel.Controls.Add(deleteSelectedButton);
+                bottomActionFooterPanel.Controls.Add(mainLaunchButton);
+                bottomActionFooterPanel.Controls.Add(statusSummaryBadge);
+
+                // AccountsView setup
+                AccountsView.Parent = centerContentPanel;
+                AccountsView.Dock = DockStyle.Fill;
+                AccountsView.Visible = true;
+                AccountsView.HeaderStyle = ColumnHeaderStyle.Nonclickable;
+
+                centerContentPanel.Controls.Add(AccountsView);
+                centerContentPanel.Controls.Add(tableActionHeader);
+                centerContentPanel.Controls.Add(kpiRowPanel);
+
+                this.Controls.Add(centerContentPanel);
+                this.Controls.Add(bottomActionFooterPanel);
+                this.Controls.Add(rightDetailsCard);
+                this.Controls.Add(mainSidebarPanel);
+                this.Controls.Add(topHeaderPanel);
+
+                topHeaderPanel.BringToFront();
+                mainSidebarPanel.BringToFront();
+                bottomActionFooterPanel.BringToFront();
+                rightDetailsCard.BringToFront();
+                centerContentPanel.BringToFront();
+
+                // Hide original redundant controls
+                Add.Visible = false;
+                Remove.Visible = false;
+                HideUsernamesCheckbox.Visible = false;
+
+                UpdateKpis();
+                UpdateLanguageStrings();
+            }
+            catch (Exception ex)
+            {
+                Program.Logger.Error("Error setting up NTG Manager 2026 layout", ex);
+            }
+        }
+
+        private Panel CreateKpiCard(string iconStr, string labelStr, string defaultValStr, Color accentColor, out Label valLabel)
+        {
+            Panel card = new Panel()
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(4),
+                BackColor = Color.FromArgb(13, 16, 26)
+            };
+
+            Label icon = new Label()
+            {
+                Text = iconStr,
+                Font = new Font("Segoe UI", 14F),
+                Location = new Point(10, 15),
+                AutoSize = true
+            };
+
+            Label lbl = new Label()
+            {
+                Text = labelStr,
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(123, 132, 163),
+                Location = new Point(45, 12),
+                AutoSize = true
+            };
+
+            valLabel = new Label()
+            {
+                Text = defaultValStr,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = accentColor,
+                Location = new Point(45, 30),
+                AutoSize = true
+            };
+
+            card.Controls.Add(icon);
+            card.Controls.Add(lbl);
+            card.Controls.Add(valLabel);
+            return card;
+        }
+
+        public void UpdateKpis()
+        {
+            int total = AccountsList?.Count ?? 0;
+            int farming = 0;
+
+            if (AccountsList != null)
+            {
+                foreach (var acc in AccountsList)
+                {
+                    if (acc.Valid && acc.Presence?.userPresenceType == UserPresenceType.InGame) farming++;
+                }
+            }
+
+            if (kpiTotalAccountsVal != null) kpiTotalAccountsVal.Text = $"{total} ID";
+            if (kpiFarmingVal != null) kpiFarmingVal.Text = $"{farming} ID";
+        }
+
+        public void UpdateLanguageStrings()
+        {
+            try
+            {
+                brandTitleLabel.Text = LanguageManager.GetText("AppTitle");
+                brandTagLabel.Text = LanguageManager.GetText("BrandTag");
+                langSwitchBtn.Text = LanguageManager.GetText("LangButton");
+                globalSearchBox.PlaceholderText = LanguageManager.GetText("BtnSearchPlaceholder");
+
+                lblMenuMain.Text = LanguageManager.GetText("MenuMain");
+                lblMenuSystem.Text = LanguageManager.GetText("MenuSystem");
+
+                navAccountsBtn.Text = LanguageManager.GetText("NavAccounts");
+                navServerBtn.Text = LanguageManager.GetText("NavGames");
+                navUtilsBtn.Text = LanguageManager.GetText("NavAutoJoiner");
+                navSecurityBtn.Text = LanguageManager.GetText("NavSecurity");
+                navSettingsBtn.Text = LanguageManager.GetText("NavSettings");
+
+                Username.Text = LanguageManager.GetText("ColNum");
+                AccountAlias.Text = LanguageManager.GetText("ColAvatarUsername");
+                Description.Text = LanguageManager.GetText("ColStatus");
+                Group.Text = LanguageManager.GetText("ColDescription");
+
+                refreshAvatarsButton.Text = LanguageManager.GetText("BtnRefreshAvatars");
+                addAccountButton.Text = LanguageManager.GetText("BtnAddAccount");
+                deleteSelectedButton.Text = LanguageManager.GetText("BtnDeleteSelected");
+
+                mainLaunchButton.Text = LanguageManager.GetText("BtnLaunch");
+                OpenBrowser.Text = LanguageManager.GetText("BtnOpenBrowser");
+
+                lblPlaceID.Text = LanguageManager.GetText("LabelPlaceID");
+                lblJobID.Text = LanguageManager.GetText("LabelJobID");
+                lblAlias.Text = LanguageManager.GetText("LabelAlias");
+                lblDescription.Text = LanguageManager.GetText("LabelDescription");
+
+                SetAlias.Text = LanguageManager.GetText("BtnSaveAlias");
+                SetDescription.Text = LanguageManager.GetText("BtnSaveDesc");
+
+                AccountsView.Refresh();
+            }
+            catch (Exception ex)
+            {
+                Program.Logger.Error("Error updating language strings", ex);
+            }
+        }
+
+        private Button CreateNavButton(string text, int top, bool active)
+        {
+            Button btn = new Button()
+            {
+                Text = text,
+                Location = new Point(8, top),
+                Size = new Size(190, 36),
+                FlatStyle = FlatStyle.Flat,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(12, 0, 0, 0),
+                Font = new Font("Segoe UI", 9.5F, active ? FontStyle.Bold : FontStyle.Regular),
+                BackColor = active ? Color.FromArgb(25, 30, 48) : Color.Transparent,
+                ForeColor = active ? Color.FromArgb(0, 242, 254) : Color.FromArgb(123, 132, 163),
+                Cursor = Cursors.Hand
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            return btn;
+        }
+
+        private void ResetNavButtons(Button activeBtn)
+        {
+            foreach (Control c in mainSidebarPanel.Controls)
+            {
+                if (c is Button b)
+                {
+                    bool isActive = (b == activeBtn);
+                    b.Font = new Font("Segoe UI", 9.5F, isActive ? FontStyle.Bold : FontStyle.Regular);
+                    b.BackColor = isActive ? Color.FromArgb(25, 30, 48) : Color.Transparent;
+                    b.ForeColor = isActive ? Color.FromArgb(0, 242, 254) : Color.FromArgb(123, 132, 163);
+                }
+            }
         }
     }
 }

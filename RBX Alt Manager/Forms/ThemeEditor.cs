@@ -1,4 +1,4 @@
-﻿using FastColoredTextBoxNS;
+using FastColoredTextBoxNS;
 using System;
 using System.Drawing;
 using System.IO;
@@ -9,25 +9,25 @@ namespace RBX_Alt_Manager.Forms
 {
     public partial class ThemeEditor : Form
     {
-        public static Color AccountBackground = SystemColors.Control;
-        public static Color AccountForeground = SystemColors.ControlText;
+        public static Color AccountBackground = Color.FromArgb(0x0F, 0x17, 0x2A);
+        public static Color AccountForeground = Color.FromArgb(0xF8, 0xFA, 0xFC);
 
-        public static Color ButtonsBackground = SystemColors.Control;
-        public static Color ButtonsForeground = SystemColors.ControlText;
-        public static Color ButtonsBorder = SystemColors.Control;
-        public static FlatStyle ButtonStyle = FlatStyle.Standard;
+        public static Color ButtonsBackground = Color.FromArgb(0x1E, 0x29, 0x3B);
+        public static Color ButtonsForeground = Color.FromArgb(0xF8, 0xFA, 0xFC);
+        public static Color ButtonsBorder = Color.FromArgb(0x63, 0x66, 0xF1);
+        public static FlatStyle ButtonStyle = FlatStyle.Flat;
 
-        public static Color FormsBackground = SystemColors.Control;
-        public static Color FormsForeground = SystemColors.ControlText;
+        public static Color FormsBackground = Color.FromArgb(0x09, 0x0D, 0x16);
+        public static Color FormsForeground = Color.FromArgb(0xF8, 0xFA, 0xFC);
         public static bool UseDarkTopBar = true;
         public static bool ShowHeaders = true;
 
-        public static Color TextBoxesBackground = SystemColors.Control;
-        public static Color TextBoxesForeground = SystemColors.ControlText;
-        public static Color TextBoxesBorder = Color.FromArgb(0x7A7A7A);
+        public static Color TextBoxesBackground = Color.FromArgb(0x1E, 0x29, 0x3B);
+        public static Color TextBoxesForeground = Color.FromArgb(0xF8, 0xFA, 0xFC);
+        public static Color TextBoxesBorder = Color.FromArgb(0x47, 0x55, 0x69);
 
-        public static Color LabelBackground = SystemColors.Control;
-        public static Color LabelForeground = SystemColors.ControlText;
+        public static Color LabelBackground = Color.Transparent;
+        public static Color LabelForeground = Color.FromArgb(0xF8, 0xFA, 0xFC);
         public static bool LabelTransparent = true;
         
         public static bool LightImages = false;

@@ -1,4 +1,4 @@
-﻿using BrightIdeasSoftware;
+using BrightIdeasSoftware;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -39,12 +39,25 @@ public static class Utilities
         return (Arr.Length == j) ? Arr[0] : Arr[j];
     }
 
-    public static T Clamp<T>(this T val, T min, T max) where T : IComparable<T>
+    [DllImport("gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
+    public static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
+    // ponytail: win32 rounded control region helper
+    public static void MakeRounded(this Control control, int radius)
     {
-        if (val.CompareTo(min) < 0) return min;
-        else if (val.CompareTo(max) > 0) return max;
-        else return val;
+        if (control == null) return;
+        void ApplyRegion()
+        {
+            if (control.Width > 0 && control.Height > 0)
+                control.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, control.Width + 1, control.Height + 1, radius, radius));
+        }
+        ApplyRegion();
+        control.SizeChanged += (s, e) => ApplyRegion();
     }
+
+    // ponytail: simplified Clamp extension method
+    public static T Clamp<T>(this T val, T min, T max) where T : IComparable<T> =>
+        val.CompareTo(min) < 0 ? min : val.CompareTo(max) > 0 ? max : val;
 
     public static Control GetSource(this ToolStripMenuItem item) => item?.Owner is ContextMenuStrip strip ? strip.SourceControl : null;
 
@@ -60,37 +73,23 @@ public static class Utilities
         return success;
     }
 
-    public static void InvokeIfRequired(this Control _Control, MethodInvoker _Action)
+    // ponytail: simplified WinForms cross-thread invocation helper
+    public static void InvokeIfRequired(this Control control, System.Windows.Forms.MethodInvoker action)
     {
-        if (_Control.InvokeRequired)
-            _Control.Invoke(_Action);
-        else
-            _Action();
+        if (control != null && !control.IsDisposed)
+        {
+            if (control.InvokeRequired) control.Invoke(action);
+            else action();
+        }
     }
 
-    public static string MD5(string input)
-    {
-        MD5 md5 = System.Security.Cryptography.MD5.Create();
-        byte[] inputBytes = Encoding.ASCII.GetBytes(input);
-        byte[] hashBytes = md5.ComputeHash(inputBytes);
+    // ponytail: simplified MD5 using standard .NET primitives
+    public static string MD5(string input) => Convert.ToHexString(System.Security.Cryptography.MD5.HashData(Encoding.ASCII.GetBytes(input)));
 
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < hashBytes.Length; i++)
-            sb.Append(hashBytes[i].ToString("X2"));
-
-        return sb.ToString();
-    }
-
-    public static string FileSHA256(this string FileName)
-    {
-        if (!File.Exists(FileName)) return "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855";
-
-        using SHA256 SHA256 = SHA256.Create();
-        using FileStream fileStream = File.OpenRead(FileName);
-
-        return BitConverter.ToString(SHA256.ComputeHash(fileStream)).Replace("-", "");
-    }
+    // ponytail: simplified SHA256 hash using File.ReadAllBytes and Convert.ToHexString
+    public static string FileSHA256(this string FileName) =>
+        !File.Exists(FileName) ? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855" :
+        Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(FileName)));
 
 public static Color Lerp(this Color s, Color t, float k)
     {
@@ -219,22 +218,22 @@ public static Color Lerp(this Color s, Color t, float k)
         if (CanSave && AccountManager.Prompts.Exists(Hash))
             return AccountManager.Prompts.Get<bool>(Hash);
 
-        TaskDialog Dialog = TaskDialog.IsPlatformSupported == true ? new TaskDialog()
+        var Dialog = Microsoft.WindowsAPICodePack.Dialogs.TaskDialog.IsPlatformSupported ? new Microsoft.WindowsAPICodePack.Dialogs.TaskDialog()
         {
             Caption = Caption,
             InstructionText = Instruction,
             Text = Text,
             FooterCheckBoxText = CanSave ? "Don't show this again and remember my choice" : null,
-            StandardButtons = TaskDialogStandardButtons.Yes | TaskDialogStandardButtons.No,
+            StandardButtons = Microsoft.WindowsAPICodePack.Dialogs.TaskDialogStandardButtons.Yes | Microsoft.WindowsAPICodePack.Dialogs.TaskDialogStandardButtons.No,
         } : null;
 
         var DR = Dialog?.Show();
 
         if (CanSave && Dialog?.FooterCheckBoxChecked == true)
         {
-            if (SaveIfNo || (!SaveIfNo && DR == TaskDialogResult.Yes))
+            if (SaveIfNo || (!SaveIfNo && DR == Microsoft.WindowsAPICodePack.Dialogs.TaskDialogResult.Yes))
             {
-                AccountManager.Prompts.Set(Hash, DR == TaskDialogResult.Yes ? "true" : "false");
+                AccountManager.Prompts.Set(Hash, DR == Microsoft.WindowsAPICodePack.Dialogs.TaskDialogResult.Yes ? "true" : "false");
                 AccountManager.IniSettings.Save("RAMSettings.ini");
             }
         }
@@ -268,17 +267,11 @@ public static Color Lerp(this Color s, Color t, float k)
             }
             else if (control is TextBox || control is RichTextBox)
             {
-                if (control is BorderedTextBox)
-                {
-                    BorderedTextBox b = control as BorderedTextBox;
+                if (control is BorderedTextBox b)
                     b.BorderColor = ThemeEditor.TextBoxesBorder;
-                }
 
-                if (control is BorderedRichTextBox)
-                {
-                    BorderedRichTextBox b = control as BorderedRichTextBox;
-                    b.BorderColor = ThemeEditor.TextBoxesBorder;
-                }
+                if (control is BorderedRichTextBox rb)
+                    rb.BorderColor = ThemeEditor.TextBoxesBorder;
 
                 control.BackColor = ThemeEditor.TextBoxesBackground;
                 control.ForeColor = ThemeEditor.TextBoxesForeground;
@@ -290,8 +283,16 @@ public static Color Lerp(this Color s, Color t, float k)
             }
             else if (control is ProgressBar)
                 control.BackColor = ThemeEditor.LabelBackground;
-            else if (control is Panel)
-                control.Controls.ApplyTheme();
+            else if (control is Panel panel)
+            {
+                panel.BackColor = ThemeEditor.FormsBackground;
+                panel.Controls.ApplyTheme();
+            }
+            else if (control is GroupBox group)
+            {
+                group.ForeColor = ThemeEditor.FormsForeground;
+                group.Controls.ApplyTheme();
+            }
         }
     }
 

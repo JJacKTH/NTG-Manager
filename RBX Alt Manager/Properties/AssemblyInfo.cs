@@ -1,14 +1,14 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Roblox Account Manager")]
-[assembly: AssemblyDescription("Created by ic3w0lf")]
+[assembly: AssemblyTitle("NTG Manager")]
+[assembly: AssemblyDescription("Created by NTG Team")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("ic3")]
-[assembly: AssemblyProduct("Roblox Account Manager")]
+[assembly: AssemblyCompany("NTG")]
+[assembly: AssemblyProduct("NTG Manager")]
 [assembly: AssemblyCopyright("Copyright © ic3 2023")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
