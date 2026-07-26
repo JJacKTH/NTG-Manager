@@ -2810,10 +2810,12 @@ namespace RBX_Alt_Manager
                 rightDetailsCard.BringToFront();
                 centerContentPanel.BringToFront();
 
-                // Hide original redundant controls
-                Add.Visible = false;
-                Remove.Visible = false;
-                HideUsernamesCheckbox.Visible = false;
+                // Apply subtle rounded corners (10px radius) to dashboard buttons
+                langSwitchBtn.MakeRounded(10);
+                refreshAvatarsButton.MakeRounded(10);
+                addAccountButton.MakeRounded(10);
+                deleteSelectedButton.MakeRounded(10);
+                mainLaunchButton.MakeRounded(10);
 
                 UpdateKpis();
                 UpdateLanguageStrings();
@@ -2944,6 +2946,7 @@ namespace RBX_Alt_Manager
                 Cursor = Cursors.Hand
             };
             btn.FlatAppearance.BorderSize = 0;
+            btn.MakeRounded(8);
             return btn;
         }
 
