@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -11,7 +12,7 @@ namespace RBX_Alt_Manager.Classes
 {
     internal class RobloxProcess
     {
-        private Process RbxProcess;
+        public Process RbxProcess { get; private set; }
         private int LogFileRetries = 0;
         public FileInfo LogFile;
         private FileStream LogStream;
@@ -213,8 +214,30 @@ namespace RBX_Alt_Manager.Classes
             Program.Logger.Info($"Attempting to kill process {RbxProcess.Id}, reason: {Reason}");
             StreamDisposed = true;
 
-            LogStream.Dispose();
-            RbxProcess.Kill();
+            string cmd = RbxProcess.GetCommandLine();
+
+            LogStream?.Dispose();
+            try { RbxProcess.Kill(); } catch { }
+
+            // ponytail: Auto Rejoin Guard & Relaunch by matching BrowserTrackerID
+            if (AccountManager.Watcher.Get<bool>("AutoRejoinEnabled") && !string.IsNullOrEmpty(cmd))
+            {
+                var match = Regex.Match(cmd, @"\-b (\d+)");
+                if (match.Success)
+                {
+                    string trackerId = match.Groups[1].Value;
+                    var account = AccountManager.AccountsList?.FirstOrDefault(a => a.BrowserTrackerID == trackerId);
+                    if (account != null)
+                    {
+                        Program.Logger.Info($"[AutoRejoin] Auto-rejoining account {account.Username} in 5 seconds...");
+                        long placeId = 0;
+                        long.TryParse(account.GetField("SavedPlaceId"), out placeId);
+                        string jobId = account.GetField("SavedJobId") ?? "";
+
+                        Task.Delay(5000).ContinueWith(_ => account.JoinServer(placeId, jobId));
+                    }
+                }
+            }
 
             return true;
         }

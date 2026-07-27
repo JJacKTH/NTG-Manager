@@ -134,8 +134,10 @@ namespace RBX_Alt_Manager.Classes
             // Determine exact item selection state
             bool isRowSelected = (Event != null && Event.Item != null) ? Event.Item.Selected : IsItemSelected;
 
-            // Draw solid opaque background for selected & normal states to prevent default WinForms text overlay
-            Color bgClr = isRowSelected ? Color.FromArgb(22, 32, 54) : Color.FromArgb(10, 12, 20);
+            // Soft alternating dark row backgrounds matching theme
+            int rowIdx = (Event != null && Event.Item != null) ? Event.Item.Index : 0;
+            Color altRowColor = (rowIdx % 2 == 0) ? Color.FromArgb(16, 20, 30) : Color.FromArgb(22, 28, 42);
+            Color bgClr = isRowSelected ? Color.FromArgb(32, 45, 75) : altRowColor;
             using (SolidBrush cellBg = new SolidBrush(bgClr))
             {
                 g.FillRectangle(cellBg, r);

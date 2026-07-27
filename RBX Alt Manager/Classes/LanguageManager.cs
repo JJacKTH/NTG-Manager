@@ -40,6 +40,7 @@ namespace RBX_Alt_Manager.Classes
             { "NavVipServers", new Dictionary<Language, string> { { Language.TH, "🖥️ เซิร์ฟเวอร์ VIP" }, { Language.EN, "🖥️ VIP Servers" } } },
             { "MenuSystem", new Dictionary<Language, string> { { Language.TH, "ระบบ" }, { Language.EN, "SYSTEM" } } },
             { "NavSecurity", new Dictionary<Language, string> { { Language.TH, "🛡️ ความปลอดภัย" }, { Language.EN, "🛡️ Security & Cookies" } } },
+            { "NavWatcher", new Dictionary<Language, string> { { Language.TH, "👁️ ตั้งค่า Watcher" }, { Language.EN, "👁️ Roblox Watcher" } } },
             { "NavSettings", new Dictionary<Language, string> { { Language.TH, "⚙️ ตั้งค่า" }, { Language.EN, "⚙️ Settings" } } },
 
             // KPI Badges

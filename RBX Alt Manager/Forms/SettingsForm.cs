@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -68,6 +68,28 @@ namespace RBX_Alt_Manager.Forms
             }
 
             SettingsLoaded = true;
+
+            // ponytail: Add Theme Selection Dropdown
+            Label themeLabel = new Label { Text = "🎨 เลือกธีมระบบ (Custom Preset Theme):", AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold), Margin = new Padding(3, 10, 3, 3) };
+            ComboBox themeCombo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 280, Margin = new Padding(3, 3, 3, 10) };
+            themeCombo.Items.AddRange(new object[]
+            {
+                "1. Slate Blue (โทนเทาอมฟ้าสไตล์ซอฟต์)",
+                "2. Warm Gray (โทนอุ่น สบายสายตา)",
+                "3. Cool Neutral Modern (โทนเทากลาง มินิมอล macOS)",
+                "4. Mid-tone Pastel (โทนพาสเทลกลางๆ ดูสดใส)"
+            });
+
+            int savedTheme = AccountManager.Watcher.Get<int>("SelectedThemeIndex");
+            themeCombo.SelectedIndex = (savedTheme >= 0 && savedTheme < 4) ? savedTheme : 0;
+            themeCombo.SelectedIndexChanged += (s, ev) =>
+            {
+                if (!SettingsLoaded) return;
+                ThemeEditor.ApplyPresetTheme(themeCombo.SelectedIndex);
+            };
+
+            SettingsLayoutPanel.Controls.Add(themeLabel);
+            SettingsLayoutPanel.Controls.Add(themeCombo);
 
             ApplyTheme();
         }

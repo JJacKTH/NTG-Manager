@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using PuppeteerSharp;
 using RBX_Alt_Manager.Classes;
 using RBX_Alt_Manager.Forms;
+using RBX_Alt_Manager.Nexus;
 using RBX_Alt_Manager.Properties;
 using RestSharp;
 using Sodium;
@@ -64,6 +65,10 @@ namespace RBX_Alt_Manager
         private AccountControl ControlForm;
         private SettingsForm SettingsForm;
         private RecentGamesForm RGForm;
+        private AutoRejoinControl autoRejoinControl;
+        private WatcherControl watcherControl;
+        private Button navWatcherBtn;
+        private Panel bottomActionFooterPanel;
         private readonly static DateTime startTime = DateTime.Now;
         public static bool IsTeleport = false;
         public static bool UseOldJoin = false;
@@ -2467,12 +2472,23 @@ namespace RBX_Alt_Manager
                 };
 
                 navSecurityBtn = CreateNavButton(LanguageManager.GetText("NavSecurity"), 243, false);
-                navSettingsBtn = CreateNavButton(LanguageManager.GetText("NavSettings"), 285, false);
+                navWatcherBtn = CreateNavButton(LanguageManager.GetText("NavWatcher"), 285, false);
+                navSettingsBtn = CreateNavButton(LanguageManager.GetText("NavSettings"), 327, false);
 
-                navAccountsBtn.Click += (s, e) => ResetNavButtons(navAccountsBtn);
+                autoRejoinControl = new AutoRejoinControl()
+                {
+                    Dock = DockStyle.Fill,
+                    Visible = false
+                };
+
+                watcherControl = new WatcherControl()
+                {
+                    Dock = DockStyle.Fill,
+                    Visible = false
+                };
+
                 navServerBtn.Click += (s, e) => { ResetNavButtons(navServerBtn); ServerList_Click(s, e); };
-                navUtilsBtn.Click += (s, e) => { ResetNavButtons(navUtilsBtn); ConfigButton_Click(s, e); };
-                navSettingsBtn.Click += (s, e) => { ResetNavButtons(navSettingsBtn); EditTheme_Click(s, e); };
+                navSettingsBtn.Click += (s, e) => { ResetNavButtons(navSettingsBtn); ConfigButton_Click(s, e); };
                 navSecurityBtn.Click += (s, e) => { ResetNavButtons(navSecurityBtn); ConfigButton_Click(s, e); };
 
                 mainSidebarPanel.Controls.Add(lblMenuMain);
@@ -2482,6 +2498,7 @@ namespace RBX_Alt_Manager
                 mainSidebarPanel.Controls.Add(navVipBtn);
                 mainSidebarPanel.Controls.Add(lblMenuSystem);
                 mainSidebarPanel.Controls.Add(navSecurityBtn);
+                mainSidebarPanel.Controls.Add(navWatcherBtn);
                 mainSidebarPanel.Controls.Add(navSettingsBtn);
 
                 // 3. Right Details & Quick Launch Card Panel
@@ -2737,8 +2754,7 @@ namespace RBX_Alt_Manager
                 tableActionHeader.Controls.Add(refreshAvatarsButton);
                 tableActionHeader.Controls.Add(addAccountButton);
 
-                // 5. Bottom Action Footer Bar
-                Panel bottomActionFooterPanel = new Panel()
+                bottomActionFooterPanel = new Panel()
                 {
                     Dock = DockStyle.Bottom,
                     Height = 56,
@@ -2794,19 +2810,23 @@ namespace RBX_Alt_Manager
                 AccountsView.Visible = true;
                 AccountsView.HeaderStyle = ColumnHeaderStyle.Nonclickable;
 
+                autoRejoinControl.Parent = centerContentPanel;
+                watcherControl.Parent = centerContentPanel;
+
                 centerContentPanel.Controls.Add(AccountsView);
                 centerContentPanel.Controls.Add(tableActionHeader);
                 centerContentPanel.Controls.Add(kpiRowPanel);
+                centerContentPanel.Controls.Add(bottomActionFooterPanel);
+                centerContentPanel.Controls.Add(autoRejoinControl);
+                centerContentPanel.Controls.Add(watcherControl);
 
                 this.Controls.Add(centerContentPanel);
-                this.Controls.Add(bottomActionFooterPanel);
                 this.Controls.Add(rightDetailsCard);
                 this.Controls.Add(mainSidebarPanel);
                 this.Controls.Add(topHeaderPanel);
 
                 topHeaderPanel.BringToFront();
                 mainSidebarPanel.BringToFront();
-                bottomActionFooterPanel.BringToFront();
                 rightDetailsCard.BringToFront();
                 centerContentPanel.BringToFront();
 
@@ -2819,6 +2839,73 @@ namespace RBX_Alt_Manager
 
                 UpdateKpis();
                 UpdateLanguageStrings();
+
+                // ponytail: Simplify ContextMenu to 3 items (Add to Relaunch, Copy User:Pass, Copy Security Token)
+                ToolStripMenuItem btnAddToRelaunch = new ToolStripMenuItem("⚡ Add to Relaunch");
+                ToolStripMenuItem btnCopyUserPass = new ToolStripMenuItem("📋 Copy User:Pass");
+                ToolStripMenuItem btnCopyToken = new ToolStripMenuItem("🔑 Copy Security Token");
+
+                btnAddToRelaunch.Click += (s, e) =>
+                {
+                    var targets = AccountsView.SelectedObjects?.Cast<Account>().ToList();
+                    if (targets != null && targets.Count > 0)
+                    {
+                        foreach (var acc in targets)
+                        {
+                            acc.SetField("AddToRelaunch", "true");
+                        }
+                        MessageBox.Show($"เพิ่ม {targets.Count} บัญชีเข้าสู่ระบบ Auto Relaunch เรียบร้อยแล้ว!", "Auto Relaunch", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                };
+
+                btnCopyUserPass.Click += (s, e) => copyUserPassComboToolStripMenuItem_Click(s, e);
+                btnCopyToken.Click += (s, e) => copySecurityTokenToolStripMenuItem_Click(s, e);
+
+                AccountsStrip.Items.Clear();
+                AccountsStrip.Items.Add(btnAddToRelaunch);
+                AccountsStrip.Items.Add(new ToolStripSeparator());
+                AccountsStrip.Items.Add(btnCopyUserPass);
+                AccountsStrip.Items.Add(btnCopyToken);
+
+                navAccountsBtn.Click += (s, e) =>
+                {
+                    ResetNavButtons(navAccountsBtn);
+                    autoRejoinControl.Visible = false;
+                    watcherControl.Visible = false;
+                    rightDetailsCard.Visible = false;
+                    AccountsView.Visible = true;
+                    tableActionHeader.Visible = true;
+                    kpiRowPanel.Visible = true;
+                    bottomActionFooterPanel.Visible = true;
+                    centerContentPanel.BringToFront();
+                };
+
+                navUtilsBtn.Click += (s, e) =>
+                {
+                    ResetNavButtons(navUtilsBtn);
+                    autoRejoinControl.RefreshAccountsList();
+                    autoRejoinControl.Visible = true;
+                    watcherControl.Visible = false;
+                    rightDetailsCard.Visible = false;
+                    AccountsView.Visible = false;
+                    tableActionHeader.Visible = false;
+                    kpiRowPanel.Visible = false;
+                    bottomActionFooterPanel.Visible = false;
+                    autoRejoinControl.BringToFront();
+                };
+
+                navWatcherBtn.Click += (s, e) =>
+                {
+                    ResetNavButtons(navWatcherBtn);
+                    autoRejoinControl.Visible = false;
+                    watcherControl.Visible = true;
+                    rightDetailsCard.Visible = false;
+                    AccountsView.Visible = false;
+                    tableActionHeader.Visible = false;
+                    kpiRowPanel.Visible = false;
+                    bottomActionFooterPanel.Visible = false;
+                    watcherControl.BringToFront();
+                };
             }
             catch (Exception ex)
             {
@@ -2900,6 +2987,7 @@ namespace RBX_Alt_Manager
                 navServerBtn.Text = LanguageManager.GetText("NavGames");
                 navUtilsBtn.Text = LanguageManager.GetText("NavAutoJoiner");
                 navSecurityBtn.Text = LanguageManager.GetText("NavSecurity");
+                if (navWatcherBtn != null) navWatcherBtn.Text = LanguageManager.GetText("NavWatcher");
                 navSettingsBtn.Text = LanguageManager.GetText("NavSettings");
 
                 Username.Text = LanguageManager.GetText("ColNum");

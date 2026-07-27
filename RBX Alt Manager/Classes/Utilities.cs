@@ -258,20 +258,22 @@ public static Color Lerp(this Color s, Color t, float k)
                         control.ColorImage(255, 255, 255);
 
                     Button b = control as Button;
-                    b.FlatStyle = ThemeEditor.ButtonStyle;
+                    b.FlatStyle = FlatStyle.Flat;
+                    b.FlatAppearance.BorderSize = 1;
                     b.FlatAppearance.BorderColor = ThemeEditor.ButtonsBorder;
+                    b.Cursor = Cursors.Hand;
                 }
 
                 if (!(control is CheckBox)) control.BackColor = ThemeEditor.ButtonsBackground;
                 control.ForeColor = ThemeEditor.ButtonsForeground;
             }
-            else if (control is TextBox || control is RichTextBox)
+            else if (control is TextBox || control is RichTextBox || control is ComboBox || control is NumericUpDown)
             {
                 if (control is BorderedTextBox b)
-                    b.BorderColor = ThemeEditor.TextBoxesBorder;
+                    b.BorderColor = ThemeEditor.ButtonsBorder;
 
                 if (control is BorderedRichTextBox rb)
-                    rb.BorderColor = ThemeEditor.TextBoxesBorder;
+                    rb.BorderColor = ThemeEditor.ButtonsBorder;
 
                 control.BackColor = ThemeEditor.TextBoxesBackground;
                 control.ForeColor = ThemeEditor.TextBoxesForeground;
