@@ -26,7 +26,6 @@ namespace RBX_Alt_Manager.Nexus
         private CheckBox StartOnPCStartup;
         private CheckBox ShuffleLowestServerCB;
         private CheckBox MultiRobloxCB;
-        private CheckBox AutoCookieRefreshCB;
         private Label RegionFormatLabel;
         private TextBox RegionFormatTB;
         private Label MRGLabel;
@@ -103,90 +102,98 @@ namespace RBX_Alt_Manager.Nexus
             this.Controls.Add(SettingsTC);
         }
 
-        private FlowLayoutPanel CreateScrollableLayoutPanel()
+        private Panel CreateMainScrollContainer()
         {
-            return new FlowLayoutPanel
+            return new Panel
             {
                 Dock = DockStyle.Fill,
                 AutoScroll = true,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
-                Padding = new Padding(16),
+                Padding = new Padding(24),
                 BackColor = Color.FromArgb(15, 17, 26)
             };
         }
 
-        private CheckBox CreateCheckBox(string text, string tooltipText)
+        private Panel CreateCardPanel(int x, int y, int width, int height)
+        {
+            Panel p = new Panel
+            {
+                Location = new Point(x, y),
+                Size = new Size(width, height),
+                BackColor = Color.FromArgb(22, 26, 38),
+                Padding = new Padding(16)
+            };
+            p.MakeRounded(12);
+            return p;
+        }
+
+        private CheckBox CreateCheckBox(string text, int x, int y, string tooltipText)
         {
             CheckBox cb = new CheckBox
             {
                 Text = text,
+                Location = new Point(x, y),
                 AutoSize = true,
-                ForeColor = Color.FromArgb(240, 243, 254),
-                Margin = new Padding(3, 6, 3, 6),
+                ForeColor = Color.White,
                 Cursor = Cursors.Hand
             };
             if (!string.IsNullOrEmpty(tooltipText)) Helper.SetToolTip(cb, tooltipText);
             return cb;
         }
 
-        private Panel CreateRowContainer(Control leftControl, Control rightControl)
+        private Label CreateLabel(string text, int x, int y)
         {
-            Panel row = new Panel
+            return new Label
             {
-                Size = new Size(500, 36),
-                Margin = new Padding(3, 4, 3, 4)
+                Text = text,
+                Location = new Point(x, y),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(148, 163, 184)
             };
-            leftControl.Location = new Point(0, 8);
-            rightControl.Location = new Point(220, 4);
-            row.Controls.Add(leftControl);
-            row.Controls.Add(rightControl);
-            return row;
         }
 
         private void BuildGeneralTab()
         {
-            FlowLayoutPanel panel = CreateScrollableLayoutPanel();
+            Panel container = CreateMainScrollContainer();
+            int top = 10;
 
             Label header = new Label
             {
                 Text = "⚙️ GENERAL SETTINGS",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 242, 254),
-                AutoSize = true,
-                Margin = new Padding(3, 0, 3, 16)
+                Location = new Point(0, top),
+                AutoSize = true
             };
-            panel.Controls.Add(header);
+            container.Controls.Add(header);
+            top += 40;
 
-            AutoUpdateCB = CreateCheckBox("Check for Updates", "ตรวจสอบการอัปเดตโปรแกรมใหม่อัตโนมัติเมื่อเปิดใช้งาน");
+            // Card 1: Core Startup & App Settings
+            Panel card1 = CreateCardPanel(0, top, 680, 290);
+            top += 305;
+
+            AutoUpdateCB = CreateCheckBox("Check for Updates (ตรวจสอบการอัปเดตใหม่อัตโนมัติ)", 16, 16, "ตรวจสอบการอัปเดตโปรแกรมใหม่อัตโนมัติเมื่อเปิดใช้งาน");
             AutoUpdateCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("CheckForUpdates", AutoUpdateCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(AutoUpdateCB);
 
-            AsyncJoinCB = CreateCheckBox("Async Launching", "เปิดใช้งานการรันล็อกอินหลายไอดีแบบขนาน (Async) ลดเวลารอระหว่างเข้าเกม");
-            LaunchDelayNumber = new NumericUpDown { Maximum = 60, Minimum = 0, Width = 80, Value = 1 };
-            DelayLabel = new Label { Text = "Launch Delay (s):", AutoSize = true, ForeColor = Color.FromArgb(240, 243, 254) };
+            AsyncJoinCB = CreateCheckBox("Async Launching (เข้าเกมหลายไอดีแบบขนาน)", 16, 50, "เปิดใช้งานการรันล็อกอินหลายไอดีแบบขนาน (Async) ลดเวลารอระหว่างเข้าเกม");
+            DelayLabel = CreateLabel("Launch Delay (s):", 340, 50);
+            LaunchDelayNumber = new NumericUpDown { Location = new Point(460, 47), Size = new Size(70, 25), Maximum = 60, Minimum = 0, Value = 1, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
             AsyncJoinCB.CheckedChanged += (s, e) =>
             {
                 LaunchDelayNumber.Enabled = !AsyncJoinCB.Checked;
                 if (SettingsLoaded) { AccountManager.General.Set("AsyncJoin", AsyncJoinCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); }
             };
             LaunchDelayNumber.ValueChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("AccountJoinDelay", LaunchDelayNumber.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(AsyncJoinCB);
-            panel.Controls.Add(CreateRowContainer(DelayLabel, LaunchDelayNumber));
 
-            SavePasswordCB = CreateCheckBox("Save Passwords", "บันทึกรหัสผ่านบัญชีเก็บไว้ในไฟล์ระบบอย่างปลอดภัย");
+            SavePasswordCB = CreateCheckBox("Save Passwords (บันทึกรหัสผ่านบัญชีอย่างปลอดภัย)", 16, 84, "บันทึกรหัสผ่านบัญชีเก็บไว้ในไฟล์ระบบอย่างปลอดภัย");
             SavePasswordCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("SavePasswords", SavePasswordCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(SavePasswordCB);
 
-            DisableAgingAlertCB = CreateCheckBox("Disable Aging Alert", "ปิดการแจ้งเตือนสัญลักษณ์แจ้งเตือนไอดีไม่ได้เข้าใช้นาน (Aging Dots)");
+            DisableAgingAlertCB = CreateCheckBox("Disable Aging Alert (ปิดการแจ้งเตือนไอดีไม่ได้เข้านาน)", 16, 118, "ปิดการแจ้งเตือนสัญลักษณ์แจ้งเตือนไอดีไม่ได้เข้าใช้นาน (Aging Dots)");
             DisableAgingAlertCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("DisableAgingAlert", DisableAgingAlertCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(DisableAgingAlertCB);
 
-            HideMRobloxCB = CreateCheckBox("Hide Multi Roblox Alert", "ปิดการแสดงป๊อปอัปเตือนเรื่อง Multi Roblox");
+            HideMRobloxCB = CreateCheckBox("Hide Multi Roblox Alert (ปิดแจ้งเตือนป๊อปอัป Multi Roblox)", 16, 152, "ปิดการแสดงป๊อปอัปเตือนเรื่อง Multi Roblox");
             HideMRobloxCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("HideRbxAlert", HideMRobloxCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(HideMRobloxCB);
 
-            StartOnPCStartup = CreateCheckBox("Run on Windows Startup", "สั่งให้โปรแกรมเปิดทำงานอัตโนมัติเมื่อเปิดคอมพิวเตอร์ (Windows Startup)");
+            StartOnPCStartup = CreateCheckBox("Run on Windows Startup (เปิดโปรแกรมอัตโนมัติพร้อม Windows)", 16, 186, "สั่งให้โปรแกรมเปิดทำงานอัตโนมัติเมื่อเปิดคอมพิวเตอร์ (Windows Startup)");
             StartOnPCStartup.CheckedChanged += (s, e) =>
             {
                 if (!SettingsLoaded) return;
@@ -197,13 +204,11 @@ namespace RBX_Alt_Manager.Nexus
                 }
                 catch { }
             };
-            panel.Controls.Add(StartOnPCStartup);
 
-            ShuffleLowestServerCB = CreateCheckBox("Shuffle Chooses Lowest Server", "สุ่มเลือกเซิร์ฟเวอร์ที่มีจำนวนผู้เล่นน้อยที่สุด เพื่อลดความแออัด");
+            ShuffleLowestServerCB = CreateCheckBox("Shuffle Chooses Lowest Server (สุ่มเข้าเซิร์ฟคนน้อยสุด)", 16, 220, "สุ่มเลือกเซิร์ฟเวอร์ที่มีจำนวนผู้เล่นน้อยที่สุด เพื่อลดความแออัด");
             ShuffleLowestServerCB.CheckedChanged += (s, e) => { AccountManager.General.Set("ShuffleChoosesLowestServer", ShuffleLowestServerCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); };
-            panel.Controls.Add(ShuffleLowestServerCB);
 
-            MultiRobloxCB = CreateCheckBox("Multi Roblox", "อนุญาตให้เปิดโปรแกรมเกม Roblox พร้อมกันได้หลายๆ จอ/ไอดี");
+            MultiRobloxCB = CreateCheckBox("Multi Roblox (เปิด Roblox ได้หลายๆ จอ/ไอดีพร้อมกัน)", 16, 254, "อนุญาตให้เปิดโปรแกรมเกม Roblox พร้อมกันได้หลายๆ จอ/ไอดี");
             MultiRobloxCB.CheckedChanged += (s, e) =>
             {
                 AccountManager.General.Set("EnableMultiRbx", MultiRobloxCB.Checked ? "true" : "false");
@@ -211,20 +216,25 @@ namespace RBX_Alt_Manager.Nexus
                 if (!AccountManager.Instance.UpdateMultiRoblox())
                     MessageBox.Show("Roblox is currently running, multi roblox will not work if roblox is open.", "Roblox Account Manager", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             };
-            panel.Controls.Add(MultiRobloxCB);
 
-            RegionFormatLabel = new Label { Text = "Region Format:", AutoSize = true, ForeColor = Color.FromArgb(240, 243, 254) };
-            RegionFormatTB = new TextBox { Width = 200, BackColor = Color.FromArgb(25, 30, 48), ForeColor = Color.White };
+            card1.Controls.AddRange(new Control[] { AutoUpdateCB, AsyncJoinCB, DelayLabel, LaunchDelayNumber, SavePasswordCB, DisableAgingAlertCB, HideMRobloxCB, StartOnPCStartup, ShuffleLowestServerCB, MultiRobloxCB });
+            container.Controls.Add(card1);
+
+            // Card 2: Formatting, Theme & Security
+            Panel card2 = CreateCardPanel(0, top, 680, 200);
+            top += 215;
+
+            RegionFormatLabel = CreateLabel("Region Format:", 16, 20);
+            RegionFormatTB = new TextBox { Location = new Point(140, 17), Size = new Size(180, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             RegionFormatTB.TextChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("ServerRegionFormat", RegionFormatTB.Text); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(CreateRowContainer(RegionFormatLabel, RegionFormatTB));
 
-            MRGLabel = new Label { Text = "Max Recent Games:", AutoSize = true, ForeColor = Color.FromArgb(240, 243, 254) };
-            MaxRecentGamesNumber = new NumericUpDown { Maximum = 30, Minimum = 1, Width = 80, Value = 5 };
+            MRGLabel = CreateLabel("Max Recent Games:", 340, 20);
+            MaxRecentGamesNumber = new NumericUpDown { Location = new Point(480, 17), Size = new Size(70, 25), Maximum = 30, Minimum = 1, Value = 5, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
             MaxRecentGamesNumber.ValueChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("MaxRecentGames", MaxRecentGamesNumber.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(CreateRowContainer(MRGLabel, MaxRecentGamesNumber));
 
-            Label themeLabel = new Label { Text = "🎨 เลือกธีมระบบ (Custom Preset Theme):", AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold), ForeColor = Color.FromArgb(240, 243, 254), Margin = new Padding(3, 12, 3, 4) };
-            themeCombo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 300, BackColor = Color.FromArgb(25, 30, 48), ForeColor = Color.White };
+            Label themeLabel = CreateLabel("🎨 เลือกธีมระบบ (Custom Preset Theme):", 16, 65);
+            themeLabel.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            themeCombo = new ComboBox { Location = new Point(16, 90), Size = new Size(300, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
             themeCombo.Items.AddRange(new object[]
             {
                 "1. Slate Blue (โทนเทาอมฟ้าสไตล์ซอฟต์)",
@@ -237,60 +247,64 @@ namespace RBX_Alt_Manager.Nexus
                 if (!SettingsLoaded) return;
                 ThemeEditor.ApplyPresetTheme(themeCombo.SelectedIndex);
             };
-            panel.Controls.Add(themeLabel);
-            panel.Controls.Add(themeCombo);
-
-            RSLabel = new Label
-            {
-                Text = "* Some settings may require restarting the program (e.g. WebServer Port, Aging Alert)",
-                AutoSize = true,
-                ForeColor = Color.FromArgb(123, 132, 163),
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Italic),
-                Margin = new Padding(3, 12, 3, 8)
-            };
-            panel.Controls.Add(RSLabel);
 
             EncryptionSelectionButton = new Button
             {
                 Text = "🔑 Reset Encryption Method",
-                Width = 260,
-                Height = 36,
-                BackColor = Color.FromArgb(25, 30, 48),
+                Location = new Point(340, 86),
+                Size = new Size(220, 32),
+                BackColor = Color.FromArgb(45, 52, 75),
                 ForeColor = Color.FromArgb(0, 242, 254),
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(3, 4, 3, 16)
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
             };
-            EncryptionSelectionButton.FlatAppearance.BorderColor = Color.FromArgb(60, 0, 242, 254);
+            EncryptionSelectionButton.FlatAppearance.BorderSize = 0;
+            EncryptionSelectionButton.MakeRounded(8);
             EncryptionSelectionButton.Click += (s, e) =>
             {
                 if (Utilities.YesNoPrompt("Settings", "Change Encryption Method", "Are you sure you want to change how your data is encrypted?", false))
                     AccountManager.Instance.ResetEncryption(true);
             };
-            panel.Controls.Add(EncryptionSelectionButton);
 
-            GeneralTab.Controls.Add(panel);
+            RSLabel = new Label
+            {
+                Text = "* Some settings may require restarting the program (e.g. WebServer Port, Aging Alert)",
+                Location = new Point(16, 145),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(123, 132, 163),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Italic)
+            };
+
+            card2.Controls.AddRange(new Control[] { RegionFormatLabel, RegionFormatTB, MRGLabel, MaxRecentGamesNumber, themeLabel, themeCombo, EncryptionSelectionButton, RSLabel });
+            container.Controls.Add(card2);
+
+            GeneralTab.Controls.Add(container);
         }
 
         private void BuildDeveloperTab()
         {
-            FlowLayoutPanel panel = CreateScrollableLayoutPanel();
+            Panel container = CreateMainScrollContainer();
+            int top = 10;
 
             Label header = new Label
             {
                 Text = "💻 DEVELOPER & WEB SERVER SETTINGS",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 242, 254),
-                AutoSize = true,
-                Margin = new Padding(3, 0, 3, 16)
+                Location = new Point(0, top),
+                AutoSize = true
             };
-            panel.Controls.Add(header);
+            container.Controls.Add(header);
+            top += 40;
 
-            EnableDMCB = CreateCheckBox("Enable Developer Mode", "เปิดโหมดนักพัฒนาเพื่อเข้าถึงเมนูและคำสั่งขั้นสูง");
+            Panel card1 = CreateCardPanel(0, top, 680, 360);
+            top += 375;
+
+            EnableDMCB = CreateCheckBox("Enable Developer Mode (เปิดโหมดนักพัฒนา)", 16, 16, "เปิดโหมดนักพัฒนาเพื่อเข้าถึงเมนูและคำสั่งขั้นสูง");
             EnableDMCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.Developer.Set("DevMode", EnableDMCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(EnableDMCB);
 
-            EnableWSCB = CreateCheckBox("Enable Web Server", "เปิดใช้งาน Web Server ในตัวสำหรับให้สคริปต์ภายนอกหรือบอทเชื่อมต่อเข้ามาได้");
+            EnableWSCB = CreateCheckBox("Enable Web Server (เปิดใช้งาน HTTP WebServer ในตัว)", 16, 50, "เปิดใช้งาน Web Server ในตัวสำหรับให้สคริปต์ภายนอกหรือบอทเชื่อมต่อเข้ามาได้");
             EnableWSCB.CheckedChanged += (s, e) =>
             {
                 if (!SettingsLoaded) return;
@@ -298,38 +312,30 @@ namespace RBX_Alt_Manager.Nexus
                 AccountManager.IniSettings.Save("RAMSettings.ini");
                 MessageBox.Show("Roblox Account Manager must be restarted to enable this setting", "Roblox Account Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
-            panel.Controls.Add(EnableWSCB);
 
-            PortLabel = new Label { Text = "Web Server Port:", AutoSize = true, ForeColor = Color.FromArgb(240, 243, 254) };
-            PortNumber = new NumericUpDown { Maximum = 65535, Minimum = 1, Width = 100, Value = 7963 };
+            PortLabel = CreateLabel("Web Server Port:", 360, 50);
+            PortNumber = new NumericUpDown { Location = new Point(480, 47), Size = new Size(80, 25), Maximum = 65535, Minimum = 1, Value = 7963, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
             PortNumber.ValueChanged += (s, e) => { if (SettingsLoaded) { AccountManager.WebServer.Set("WebServerPort", PortNumber.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(CreateRowContainer(PortLabel, PortNumber));
 
-            ERRPCB = CreateCheckBox("Every Request Requires Password", "บังคับให้ต้องส่ง WebServer Password ในทุกคำสั่ง API เพื่อความปลอดภัย");
+            ERRPCB = CreateCheckBox("Every Request Requires Password (บังคับส่งรหัสผ่าน WebServer ทุก Request)", 16, 84, "บังคับให้ต้องส่ง WebServer Password ในทุกคำสั่ง API เพื่อความปลอดภัย");
             ERRPCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.WebServer.Set("EveryRequestRequiresPassword", ERRPCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(ERRPCB);
 
-            AllowGCCB = CreateCheckBox("Allow GetCookie Method", "อนุญาตให้ API ภายนอกดึงข้อมูล Cookie บัญชีได้");
+            AllowGCCB = CreateCheckBox("Allow GetCookie Method (อนุญาต API ดึง Cookie)", 16, 118, "อนุญาตให้ API ภายนอกดึงข้อมูล Cookie บัญชีได้");
             AllowGCCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.WebServer.Set("AllowGetCookie", AllowGCCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(AllowGCCB);
 
-            AllowGACB = CreateCheckBox("Allow GetAccounts Method", "อนุญาตให้ API ภายนอกดึงรายชื่อบัญชีทั้งหมดได้");
+            AllowGACB = CreateCheckBox("Allow GetAccounts Method (อนุญาต API ดึงรายชื่อบัญชี)", 16, 152, "อนุญาตให้ API ภายนอกดึงรายชื่อบัญชีทั้งหมดได้");
             AllowGACB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.WebServer.Set("AllowGetAccounts", AllowGACB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(AllowGACB);
 
-            AllowLACB = CreateCheckBox("Allow LaunchAccount Method", "อนุญาตให้ API ภายนอกสั่งรันเข้าเกมในไอดีที่ต้องการได้");
+            AllowLACB = CreateCheckBox("Allow LaunchAccount Method (อนุญาต API สั่งเข้าเกมตามไอดี)", 16, 186, "อนุญาตให้ API ภายนอกสั่งรันเข้าเกมในไอดีที่ต้องการได้");
             AllowLACB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.WebServer.Set("AllowLaunchAccount", AllowLACB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(AllowLACB);
 
-            AllowAECB = CreateCheckBox("Allow Account Modification Methods", "อนุญาตให้ API ภายนอกแก้ไขข้อมูลบัญชีได้");
+            AllowAECB = CreateCheckBox("Allow Account Modification Methods (อนุญาต API แก้ไขข้อมูลบัญชี)", 16, 220, "อนุญาตให้ API ภายนอกแก้ไขข้อมูลบัญชีได้");
             AllowAECB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.WebServer.Set("AllowAccountEditing", AllowAECB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(AllowAECB);
 
-            DisableImagesCB = CreateCheckBox("Disable Image Loading [Less RAM %]", "ปิดการโหลดภาพรูปโปรไฟล์เพื่อประหยัดหน่วยความจำ RAM");
+            DisableImagesCB = CreateCheckBox("Disable Image Loading [Less RAM %] (ปิดการโหลดรูปประหยัด RAM)", 16, 254, "ปิดการโหลดภาพรูปโปรไฟล์เพื่อประหยัดหน่วยความจำ RAM");
             DisableImagesCB.CheckedChanged += (s, e) => { AccountManager.General.Set("DisableImages", DisableImagesCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); };
-            panel.Controls.Add(DisableImagesCB);
 
-            AllowExternalConnectionsCB = CreateCheckBox("Allow External Connections", "อนุญาตให้เครื่องอื่นในเครือข่าย LAN/Internet เชื่อมต่อมายัง WebServer ได้");
+            AllowExternalConnectionsCB = CreateCheckBox("Allow External Connections (อนุญาตการเชื่อมต่อภายนอก LAN/Internet)", 16, 288, "อนุญาตให้เครื่องอื่นในเครือข่าย LAN/Internet เชื่อมต่อมายัง WebServer ได้");
             AllowExternalConnectionsCB.CheckedChanged += (s, e) =>
             {
                 if (!SettingsLoaded) return;
@@ -337,10 +343,9 @@ namespace RBX_Alt_Manager.Nexus
                 AccountManager.IniSettings.Save("RAMSettings.ini");
                 MessageBox.Show("Roblox Account Manager must be restarted to enable this setting\n\nThis setting requires admin privileges", "Roblox Account Manager", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
-            panel.Controls.Add(AllowExternalConnectionsCB);
 
-            WSPWLabel = new Label { Text = "Webserver Password:", AutoSize = true, ForeColor = Color.FromArgb(240, 243, 254) };
-            PasswordTextBox = new TextBox { Width = 200, BackColor = Color.FromArgb(25, 30, 48), ForeColor = Color.White };
+            WSPWLabel = CreateLabel("Webserver Password:", 16, 325);
+            PasswordTextBox = new TextBox { Location = new Point(160, 322), Size = new Size(200, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             PasswordTextBox.TextChanged += (s, e) =>
             {
                 if (!SettingsLoaded) return;
@@ -348,45 +353,48 @@ namespace RBX_Alt_Manager.Nexus
                 AccountManager.WebServer.Set("Password", PasswordTextBox.Text);
                 AccountManager.IniSettings.Save("RAMSettings.ini");
             };
-            panel.Controls.Add(CreateRowContainer(WSPWLabel, PasswordTextBox));
 
-            DeveloperTab.Controls.Add(panel);
+            card1.Controls.AddRange(new Control[] { EnableDMCB, EnableWSCB, PortLabel, PortNumber, ERRPCB, AllowGCCB, AllowGACB, AllowLACB, AllowAECB, DisableImagesCB, AllowExternalConnectionsCB, WSPWLabel, PasswordTextBox });
+            container.Controls.Add(card1);
+
+            DeveloperTab.Controls.Add(container);
         }
 
         private void BuildMiscellaneousTab()
         {
-            FlowLayoutPanel panel = CreateScrollableLayoutPanel();
+            Panel container = CreateMainScrollContainer();
+            int top = 10;
 
             Label header = new Label
             {
                 Text = "🛠️ MISCELLANEOUS SETTINGS",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(0, 242, 254),
-                AutoSize = true,
-                Margin = new Padding(3, 0, 3, 16)
+                Location = new Point(0, top),
+                AutoSize = true
             };
-            panel.Controls.Add(header);
+            container.Controls.Add(header);
+            top += 40;
 
-            PresenceCB = CreateCheckBox("Show Account Presence", "แสดงสถานะการใช้งานไอดีย้อนหลังสดใหม่ (In-Game / Online / Offline)");
+            Panel card1 = CreateCardPanel(0, top, 680, 240);
+            top += 255;
+
+            PresenceCB = CreateCheckBox("Show Account Presence (แสดงสถานะบัญชี In-Game/Online)", 16, 16, "แสดงสถานะการใช้งานไอดีย้อนหลังสดใหม่ (In-Game / Online / Offline)");
             PresenceCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("ShowPresence", PresenceCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(PresenceCB);
 
-            PresenceUpdateLabel = new Label { Text = "Refresh Presence (min):", AutoSize = true, ForeColor = Color.FromArgb(240, 243, 254) };
-            PresenceUpdateRateNum = new NumericUpDown { Maximum = 60, Minimum = 1, Width = 80, Value = 5 };
+            PresenceUpdateLabel = CreateLabel("Refresh Presence (min):", 400, 16);
+            PresenceUpdateRateNum = new NumericUpDown { Location = new Point(540, 13), Size = new Size(70, 25), Maximum = 60, Minimum = 1, Value = 5, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
             PresenceUpdateRateNum.ValueChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("PresenceUpdateRate", PresenceUpdateRateNum.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(CreateRowContainer(PresenceUpdateLabel, PresenceUpdateRateNum));
 
-            UnlockFPSCB = CreateCheckBox("Unlock FPS", "ปลดล็อกเฟรมเรตเกม Roblox ให้สูงกว่า 60 FPS");
+            UnlockFPSCB = CreateCheckBox("Unlock FPS (ปลดล็อกเฟรมเรต Roblox)", 16, 55, "ปลดล็อกเฟรมเรตเกม Roblox ให้สูงกว่า 60 FPS");
             UnlockFPSCB.CheckedChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("UnlockFPS", UnlockFPSCB.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(UnlockFPSCB);
 
-            FPSCapLabel = new Label { Text = "Max FPS Cap:", AutoSize = true, ForeColor = Color.FromArgb(240, 243, 254) };
-            MaxFPSValue = new NumericUpDown { Maximum = 360, Minimum = 15, Width = 80, Value = 60 };
+            FPSCapLabel = CreateLabel("Max FPS Cap:", 400, 55);
+            MaxFPSValue = new NumericUpDown { Location = new Point(540, 52), Size = new Size(70, 25), Maximum = 360, Minimum = 15, Value = 60, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
             MaxFPSValue.ValueChanged += (s, e) => { if (SettingsLoaded) { AccountManager.General.Set("MaxFPSValue", MaxFPSValue.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); } };
-            panel.Controls.Add(CreateRowContainer(FPSCapLabel, MaxFPSValue));
 
             CustomClientSettingsDialog = new OpenFileDialog { Filter = "JSON files (*.json)|*.json" };
-            OverrideWithCustomCB = CreateCheckBox("Use Custom ClientAppSettings", "ใช้ไฟล์คอนฟิก ClientAppSettings.json แบบกำหนดเองสำหรับ Roblox");
+            OverrideWithCustomCB = CreateCheckBox("Use Custom ClientAppSettings (ใช้ไฟล์คอนฟิก Roblox แบบกำหนดเอง)", 16, 95, "ใช้ไฟล์คอนฟิก ClientAppSettings.json แบบกำหนดเองสำหรับ Roblox");
             OverrideWithCustomCB.CheckedChanged += (s, e) =>
             {
                 if (!SettingsLoaded) return;
@@ -413,20 +421,20 @@ namespace RBX_Alt_Manager.Nexus
                 else Remove();
                 AccountManager.IniSettings.Save("RAMSettings.ini");
             };
-            panel.Controls.Add(OverrideWithCustomCB);
 
             ForceUpdateButton = new Button
             {
-                Text = "⚡ Force Update",
-                Width = 200,
-                Height = 36,
-                BackColor = Color.FromArgb(25, 30, 48),
+                Text = "⚡ Force Update Application",
+                Location = new Point(16, 150),
+                Size = new Size(240, 36),
+                BackColor = Color.FromArgb(45, 52, 75),
                 ForeColor = Color.FromArgb(255, 99, 132),
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(3, 16, 3, 16)
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
             };
-            ForceUpdateButton.FlatAppearance.BorderColor = Color.FromArgb(60, 255, 99, 132);
+            ForceUpdateButton.FlatAppearance.BorderSize = 0;
+            ForceUpdateButton.MakeRounded(8);
             ForceUpdateButton.Click += (s, e) =>
             {
                 if (!Utilities.YesNoPrompt("Auto Update", "Are you sure you want to update?", "", false)) return;
@@ -435,9 +443,11 @@ namespace RBX_Alt_Manager.Nexus
                 Process.Start(AFN, "-update");
                 Environment.Exit(1);
             };
-            panel.Controls.Add(ForceUpdateButton);
 
-            MiscellaneousTab.Controls.Add(panel);
+            card1.Controls.AddRange(new Control[] { PresenceCB, PresenceUpdateLabel, PresenceUpdateRateNum, UnlockFPSCB, FPSCapLabel, MaxFPSValue, OverrideWithCustomCB, ForceUpdateButton });
+            container.Controls.Add(card1);
+
+            MiscellaneousTab.Controls.Add(container);
         }
 
         public void LoadSettings()
