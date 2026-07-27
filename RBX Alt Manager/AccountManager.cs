@@ -67,6 +67,7 @@ namespace RBX_Alt_Manager
         private RecentGamesForm RGForm;
         private AutoRejoinControl autoRejoinControl;
         private WatcherControl watcherControl;
+        private SettingsControl settingsControl;
         private Button navWatcherBtn;
         private Panel bottomActionFooterPanel;
         private readonly static DateTime startTime = DateTime.Now;
@@ -2487,8 +2488,13 @@ namespace RBX_Alt_Manager
                     Visible = false
                 };
 
+                settingsControl = new SettingsControl()
+                {
+                    Dock = DockStyle.Fill,
+                    Visible = false
+                };
+
                 navServerBtn.Click += (s, e) => { ResetNavButtons(navServerBtn); ServerList_Click(s, e); };
-                navSettingsBtn.Click += (s, e) => { ResetNavButtons(navSettingsBtn); ConfigButton_Click(s, e); };
                 navSecurityBtn.Click += (s, e) => { ResetNavButtons(navSecurityBtn); ConfigButton_Click(s, e); };
 
                 mainSidebarPanel.Controls.Add(lblMenuMain);
@@ -2872,6 +2878,7 @@ namespace RBX_Alt_Manager
                     ResetNavButtons(navAccountsBtn);
                     autoRejoinControl.Visible = false;
                     watcherControl.Visible = false;
+                    settingsControl.Visible = false;
                     rightDetailsCard.Visible = false;
                     AccountsView.Visible = true;
                     tableActionHeader.Visible = true;
@@ -2886,6 +2893,7 @@ namespace RBX_Alt_Manager
                     autoRejoinControl.RefreshAccountsList();
                     autoRejoinControl.Visible = true;
                     watcherControl.Visible = false;
+                    settingsControl.Visible = false;
                     rightDetailsCard.Visible = false;
                     AccountsView.Visible = false;
                     tableActionHeader.Visible = false;
@@ -2899,12 +2907,28 @@ namespace RBX_Alt_Manager
                     ResetNavButtons(navWatcherBtn);
                     autoRejoinControl.Visible = false;
                     watcherControl.Visible = true;
+                    settingsControl.Visible = false;
                     rightDetailsCard.Visible = false;
                     AccountsView.Visible = false;
                     tableActionHeader.Visible = false;
                     kpiRowPanel.Visible = false;
                     bottomActionFooterPanel.Visible = false;
                     watcherControl.BringToFront();
+                };
+
+                navSettingsBtn.Click += (s, e) =>
+                {
+                    ResetNavButtons(navSettingsBtn);
+                    autoRejoinControl.Visible = false;
+                    watcherControl.Visible = false;
+                    settingsControl.Visible = true;
+                    settingsControl.LoadSettings();
+                    rightDetailsCard.Visible = false;
+                    AccountsView.Visible = false;
+                    tableActionHeader.Visible = false;
+                    kpiRowPanel.Visible = false;
+                    bottomActionFooterPanel.Visible = false;
+                    settingsControl.BringToFront();
                 };
             }
             catch (Exception ex)
