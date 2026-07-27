@@ -257,12 +257,30 @@ namespace RBX_Alt_Manager.Classes
                     Color statusBg = Color.FromArgb(20, 255, 255, 255);
                     Color statusBorder = Color.FromArgb(40, 255, 255, 255);
 
+                    bool isProcRunning = false;
+                    if (!string.IsNullOrEmpty(account.BrowserTrackerID))
+                    {
+                        try
+                        {
+                            isProcRunning = System.Diagnostics.Process.GetProcessesByName("RobloxPlayerBeta")
+                                .Any(p => !p.HasExited && p.GetCommandLine().Contains(account.BrowserTrackerID));
+                        }
+                        catch { }
+                    }
+
                     if (!account.Valid)
                     {
                         statusText = LanguageManager.GetText("StatusCookieDead");
                         statusColor = Color.FromArgb(255, 0, 85); // Dead Red
                         statusBg = Color.FromArgb(30, 255, 0, 85);
                         statusBorder = Color.FromArgb(80, 255, 0, 85);
+                    }
+                    else if (isProcRunning)
+                    {
+                        statusText = LanguageManager.GetText("StatusFarming");
+                        statusColor = Color.FromArgb(0, 242, 254); // Cyan
+                        statusBg = Color.FromArgb(30, 0, 242, 254);
+                        statusBorder = Color.FromArgb(80, 0, 242, 254);
                     }
                     else if (account.Presence != null)
                     {

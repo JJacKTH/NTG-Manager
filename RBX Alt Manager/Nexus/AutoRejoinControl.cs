@@ -52,6 +52,8 @@ namespace RBX_Alt_Manager.Nexus
         private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
         private const int SW_MINIMIZE = 6;
 
+        private System.Windows.Forms.Timer realTimeTimer;
+
         public AutoRejoinControl()
         {
             this.DoubleBuffered = true;
@@ -61,6 +63,10 @@ namespace RBX_Alt_Manager.Nexus
 
             InitializeComponents();
             RefreshAccountsList();
+
+            realTimeTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            realTimeTimer.Tick += (s, e) => UpdateRealTimeStatus();
+            realTimeTimer.Start();
         }
 
         private void InitializeComponents()
@@ -110,9 +116,10 @@ namespace RBX_Alt_Manager.Nexus
             rightControlPanel = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = 350,
+                Width = 370,
                 Padding = new Padding(16),
-                BackColor = Color.FromArgb(20, 24, 36)
+                BackColor = Color.FromArgb(20, 24, 36),
+                AutoScroll = true
             };
 
             BuildRightControlPanel();
@@ -208,13 +215,17 @@ namespace RBX_Alt_Manager.Nexus
         {
             int top = 15;
 
-            // Auto Relaunch Header & Switch
+            // 1. ⚡ AUTO RELAUNCH & QUICK LAUNCH
+            Label lblHeaderRelaunch = new Label { Text = "⚡ AUTO RELAUNCH & QUICK LAUNCH", ForeColor = Color.FromArgb(0, 242, 254), Location = new Point(15, top), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            rightControlPanel.Controls.Add(lblHeaderRelaunch);
+            top += 25;
+
             chkAutoRelaunch = new CheckBox
             {
-                Text = "⚡ Auto Relaunch",
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
+                Text = "⚡ Enable Auto Relaunch",
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(20, top),
+                Location = new Point(15, top),
                 AutoSize = true,
                 Checked = AccountManager.Watcher.Get<bool>("AutoRejoinEnabled")
             };
@@ -223,26 +234,23 @@ namespace RBX_Alt_Manager.Nexus
                 AccountManager.Watcher.Set("AutoRejoinEnabled", chkAutoRelaunch.Checked.ToString().ToLower());
             };
             rightControlPanel.Controls.Add(chkAutoRelaunch);
-            top += 45;
+            top += 35;
 
-            // placeId Field
-            Label lblPlace = new Label { Text = "placeId :", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(20, top + 3), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
-            txtPlaceId = new TextBox { Location = new Point(90, top), Size = new Size(220, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Text = AccountManager.CurrentPlaceId };
+            Label lblPlace = new Label { Text = "placeId :", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(15, top + 3), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            txtPlaceId = new TextBox { Location = new Point(85, top), Size = new Size(245, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Text = AccountManager.CurrentPlaceId };
             rightControlPanel.Controls.AddRange(new Control[] { lblPlace, txtPlaceId });
-            top += 40;
+            top += 35;
 
-            // JobId Field
-            Label lblJob = new Label { Text = "JobId :", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(20, top + 3), AutoSize = true, Font = new Font("Segoe UI", 9.5F, FontStyle.Bold) };
-            txtJobId = new TextBox { Location = new Point(90, top), Size = new Size(220, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Text = string.IsNullOrEmpty(AccountManager.CurrentJobId) ? "None" : AccountManager.CurrentJobId };
+            Label lblJob = new Label { Text = "JobId :", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(15, top + 3), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            txtJobId = new TextBox { Location = new Point(85, top), Size = new Size(245, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Text = string.IsNullOrEmpty(AccountManager.CurrentJobId) ? "None" : AccountManager.CurrentJobId };
             rightControlPanel.Controls.AddRange(new Control[] { lblJob, txtJobId });
-            top += 40;
+            top += 35;
 
-            // Save PlaceId & JobId Button (Saves according to Selection if selected, otherwise all relaunch accounts)
             btnSavePlaceJob = new Button
             {
                 Text = "💾 บันทึกตั้งค่า PlaceID & JobID",
-                Location = new Point(20, top),
-                Size = new Size(290, 34),
+                Location = new Point(15, top),
+                Size = new Size(315, 32),
                 BackColor = Color.FromArgb(0, 230, 118),
                 ForeColor = Color.Black,
                 FlatStyle = FlatStyle.Flat,
@@ -250,13 +258,12 @@ namespace RBX_Alt_Manager.Nexus
                 Cursor = Cursors.Hand
             };
             btnSavePlaceJob.FlatAppearance.BorderSize = 0;
-            btnSavePlaceJob.MakeRounded(10);
+            btnSavePlaceJob.MakeRounded(8);
             btnSavePlaceJob.Click += (s, e) =>
             {
                 if (AccountManager.AccountsList != null)
                 {
                     List<string> targetUsernames = new List<string>();
-
                     if (listViewAccounts.SelectedItems.Count > 0)
                     {
                         foreach (ListViewItem item in listViewAccounts.SelectedItems)
@@ -288,65 +295,140 @@ namespace RBX_Alt_Manager.Nexus
                 }
             };
             rightControlPanel.Controls.Add(btnSavePlaceJob);
-            top += 45;
+            top += 42;
 
-            // Action Buttons (Arrange, Minimize, Close - Rounded)
-            btnArrangeWindows = new Button { Text = "🖼️ Arrange Roblox Windows", Location = new Point(20, top), Size = new Size(290, 32), BackColor = Color.FromArgb(45, 52, 75), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+            // Action Buttons
+            btnArrangeWindows = new Button { Text = "🖼️ Arrange Windows", Location = new Point(15, top), Size = new Size(152, 30), BackColor = Color.FromArgb(45, 52, 75), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
             btnArrangeWindows.FlatAppearance.BorderSize = 0;
-            btnArrangeWindows.MakeRounded(10);
+            btnArrangeWindows.MakeRounded(8);
             btnArrangeWindows.Click += BtnArrangeWindows_Click;
-            top += 40;
 
-            btnMinimizeWindows = new Button { Text = "🔽 Minimize Windows", Location = new Point(20, top), Size = new Size(140, 32), BackColor = Color.FromArgb(45, 52, 75), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+            btnMinimizeWindows = new Button { Text = "🔽 Minimize", Location = new Point(173, top), Size = new Size(75, 30), BackColor = Color.FromArgb(45, 52, 75), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
             btnMinimizeWindows.FlatAppearance.BorderSize = 0;
-            btnMinimizeWindows.MakeRounded(10);
+            btnMinimizeWindows.MakeRounded(8);
             btnMinimizeWindows.Click += BtnMinimizeWindows_Click;
 
-            btnCloseRoblox = new Button { Text = "❌ Close Roblox", Location = new Point(170, top), Size = new Size(140, 32), BackColor = Color.FromArgb(180, 40, 40), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+            btnCloseRoblox = new Button { Text = "❌ Close", Location = new Point(254, top), Size = new Size(76, 30), BackColor = Color.FromArgb(180, 40, 40), ForeColor = Color.White, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
             btnCloseRoblox.FlatAppearance.BorderSize = 0;
-            btnCloseRoblox.MakeRounded(10);
+            btnCloseRoblox.MakeRounded(8);
             btnCloseRoblox.Click += BtnCloseRoblox_Click;
 
             rightControlPanel.Controls.AddRange(new Control[] { btnArrangeWindows, btnMinimizeWindows, btnCloseRoblox });
-            top += 50;
+            top += 45;
 
-            // Roblox CPU & Hardware Settings Header
-            Label lblCpuHeader = new Label { Text = "ROBLOX CPU & RESOURCE SETTINGS", ForeColor = Color.FromArgb(0, 242, 254), Location = new Point(20, top), AutoSize = true, Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
+            // 2. ⚙️ NEXUS CONTROL SETTINGS (Imported from Account Control)
+            Label lblHeaderNexus = new Label { Text = "⚙️ NEXUS & CONTROL SETTINGS", ForeColor = Color.FromArgb(0, 242, 254), Location = new Point(15, top), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            rightControlPanel.Controls.Add(lblHeaderNexus);
             top += 25;
 
-            Label lblCpu = new Label { Text = "CPU Core:", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(20, top + 3), AutoSize = true };
-            comboCpuCore = new ComboBox { Location = new Point(90, top), Size = new Size(70, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            CheckBox chkStartOnLaunch = new CheckBox { Text = "Start Nexus on Account Manager Launch", Location = new Point(15, top), AutoSize = true, ForeColor = Color.White, Checked = AccountManager.AccountControl.Get<bool>("StartOnLaunch") };
+            chkStartOnLaunch.CheckedChanged += (s, e) => { AccountManager.AccountControl.Set("StartOnLaunch", chkStartOnLaunch.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 26;
+
+            CheckBox chkAllowExternal = new CheckBox { Text = "Allow External Connections", Location = new Point(15, top), AutoSize = true, ForeColor = Color.White, Checked = AccountManager.AccountControl.Get<bool>("AllowExternalConnections") };
+            chkAllowExternal.CheckedChanged += (s, e) => { AccountManager.AccountControl.Set("AllowExternalConnections", chkAllowExternal.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 26;
+
+            CheckBox chkInternetCheck = new CheckBox { Text = "Check for Internet Before Launch", Location = new Point(15, top), AutoSize = true, ForeColor = Color.White, Checked = AccountManager.AccountControl.Get<bool>("InternetCheck") };
+            chkInternetCheck.CheckedChanged += (s, e) => { AccountManager.AccountControl.Set("InternetCheck", chkInternetCheck.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 26;
+
+            CheckBox chkUsePresence = new CheckBox { Text = "Use Presence API", Location = new Point(15, top), AutoSize = true, ForeColor = Color.White, Checked = AccountManager.AccountControl.Get<bool>("UsePresence") };
+            chkUsePresence.CheckedChanged += (s, e) => { AccountManager.AccountControl.Set("UsePresence", chkUsePresence.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 32;
+
+            rightControlPanel.Controls.AddRange(new Control[] { chkStartOnLaunch, chkAllowExternal, chkInternetCheck, chkUsePresence });
+
+            Label lRelaunchDelay = new Label { Text = "Relaunch Delay Per Account (sec):", Location = new Point(15, top + 3), AutoSize = true, ForeColor = Color.FromArgb(148, 163, 184) };
+            NumericUpDown numRelaunchDelay = new NumericUpDown { Location = new Point(245, top), Size = new Size(85, 24), Minimum = 1, Maximum = 9999, Value = decimal.TryParse(AccountManager.AccountControl.Get("RelaunchDelay"), out decimal rd) ? rd : 60, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            numRelaunchDelay.ValueChanged += (s, e) => { AccountManager.AccountControl.Set("RelaunchDelay", numRelaunchDelay.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 30;
+
+            Label lLauncherDelay = new Label { Text = "Launcher Delay (sec):", Location = new Point(15, top + 3), AutoSize = true, ForeColor = Color.FromArgb(148, 163, 184) };
+            NumericUpDown numLauncherDelay = new NumericUpDown { Location = new Point(245, top), Size = new Size(85, 24), Minimum = 1, Maximum = 9999, Value = decimal.TryParse(AccountManager.AccountControl.Get("LauncherDelay"), out decimal ld) ? ld : 15, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            numLauncherDelay.ValueChanged += (s, e) => { AccountManager.AccountControl.Set("LauncherDelay", numLauncherDelay.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 30;
+
+            Label lPort = new Label { Text = "Port:", Location = new Point(15, top + 3), AutoSize = true, ForeColor = Color.FromArgb(148, 163, 184) };
+            NumericUpDown numPort = new NumericUpDown { Location = new Point(245, top), Size = new Size(85, 24), Minimum = 1, Maximum = 65535, Value = decimal.TryParse(AccountManager.AccountControl.Get("NexusPort"), out decimal pVal) ? pVal : 5242, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            numPort.ValueChanged += (s, e) => { AccountManager.AccountControl.Set("NexusPort", numPort.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 38;
+
+            rightControlPanel.Controls.AddRange(new Control[] { lRelaunchDelay, numRelaunchDelay, lLauncherDelay, numLauncherDelay, lPort, numPort });
+
+            // 3. 🔄 AUTO MINIMIZE & AUTO CLOSE
+            Label lblHeaderAutoOpt = new Label { Text = "🔄 AUTO MINIMIZE & AUTO CLOSE", ForeColor = Color.FromArgb(0, 242, 254), Location = new Point(15, top), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            rightControlPanel.Controls.Add(lblHeaderAutoOpt);
+            top += 25;
+
+            CheckBox chkAutoMinimize = new CheckBox { Text = "Auto Minimize", Location = new Point(15, top), AutoSize = true, ForeColor = Color.White, Checked = AccountManager.AccountControl.Get<bool>("AutoMinimizeEnabled") };
+            chkAutoMinimize.CheckedChanged += (s, e) => { AccountManager.AccountControl.Set("AutoMinimizeEnabled", chkAutoMinimize.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+
+            Label lMinInterval = new Label { Text = "Interval (sec):", Location = new Point(150, top + 2), AutoSize = true, ForeColor = Color.FromArgb(148, 163, 184) };
+            NumericUpDown numAutoMinInterval = new NumericUpDown { Location = new Point(245, top), Size = new Size(85, 24), Minimum = 1, Maximum = 99999, Value = decimal.TryParse(AccountManager.AccountControl.Get("AutoMinimizeInterval"), out decimal mi) ? mi : 3000, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            numAutoMinInterval.ValueChanged += (s, e) => { AccountManager.AccountControl.Set("AutoMinimizeInterval", numAutoMinInterval.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 30;
+
+            CheckBox chkAutoClose = new CheckBox { Text = "Auto Close", Location = new Point(15, top), AutoSize = true, ForeColor = Color.White, Checked = AccountManager.AccountControl.Get<bool>("AutoCloseEnabled") };
+            chkAutoClose.CheckedChanged += (s, e) => { AccountManager.AccountControl.Set("AutoCloseEnabled", chkAutoClose.Checked ? "true" : "false"); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+
+            ComboBox comboAutoCloseType = new ComboBox { Location = new Point(180, top), Size = new Size(150, 24), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            comboAutoCloseType.Items.AddRange(new object[] { "Per Instance", "Global" });
+            comboAutoCloseType.SelectedIndex = int.TryParse(AccountManager.AccountControl.Get("AutoCloseType"), out int acType) ? Math.Min(1, Math.Max(0, acType)) : 0;
+            comboAutoCloseType.SelectedIndexChanged += (s, e) => { AccountManager.AccountControl.Set("AutoCloseType", comboAutoCloseType.SelectedIndex.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 30;
+
+            Label lCloseInterval = new Label { Text = "Interval (min):", Location = new Point(15, top + 3), AutoSize = true, ForeColor = Color.FromArgb(148, 163, 184) };
+            NumericUpDown numCloseInterval = new NumericUpDown { Location = new Point(245, top), Size = new Size(85, 24), Minimum = 1, Maximum = 9999, Value = decimal.TryParse(AccountManager.AccountControl.Get("AutoCloseInterval"), out decimal ci) ? ci : 1, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            numCloseInterval.ValueChanged += (s, e) => { AccountManager.AccountControl.Set("AutoCloseInterval", numCloseInterval.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 30;
+
+            Label lMaxInstances = new Label { Text = "Max Instances:", Location = new Point(15, top + 3), AutoSize = true, ForeColor = Color.FromArgb(148, 163, 184) };
+            NumericUpDown numMaxInstances = new NumericUpDown { Location = new Point(245, top), Size = new Size(85, 24), Minimum = 1, Maximum = 99, Value = decimal.TryParse(AccountManager.AccountControl.Get("MaxInstances"), out decimal maxInst) ? maxInst : 1, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            numMaxInstances.ValueChanged += (s, e) => { AccountManager.AccountControl.Set("MaxInstances", numMaxInstances.Value.ToString()); AccountManager.IniSettings.Save("RAMSettings.ini"); };
+            top += 40;
+
+            rightControlPanel.Controls.AddRange(new Control[] { chkAutoMinimize, lMinInterval, numAutoMinInterval, chkAutoClose, comboAutoCloseType, lCloseInterval, numCloseInterval, lMaxInstances, numMaxInstances });
+
+            // 4. 💻 CPU & HARDWARE LIMITS
+            Label lblCpuHeader = new Label { Text = "💻 CPU & RESOURCE SETTINGS", ForeColor = Color.FromArgb(0, 242, 254), Location = new Point(15, top), AutoSize = true, Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
+            top += 25;
+
+            Label lblCpu = new Label { Text = "CPU Core:", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(15, top + 3), AutoSize = true };
+            comboCpuCore = new ComboBox { Location = new Point(85, top), Size = new Size(80, 24), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
             comboCpuCore.Items.AddRange(new object[] { "ALL", "CORE 1", "CORE 2", "CORE 4" });
             comboCpuCore.SelectedIndex = 0;
 
-            Label lblRam = new Label { Text = "RAM:", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(175, top + 3), AutoSize = true };
-            comboRamLimit = new ComboBox { Location = new Point(220, top), Size = new Size(90, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
+            Label lblRam = new Label { Text = "RAM:", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(185, top + 3), AutoSize = true };
+            comboRamLimit = new ComboBox { Location = new Point(230, top), Size = new Size(100, 24), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White };
             comboRamLimit.Items.AddRange(new object[] { "MAX", "RAM 1GB", "RAM 2GB", "RAM 4GB" });
             comboRamLimit.SelectedIndex = 0;
 
             rightControlPanel.Controls.AddRange(new Control[] { lblCpuHeader, lblCpu, comboCpuCore, lblRam, comboRamLimit });
-            top += 45;
-
-            // Timer & Delays Inputs
-            Label lblDelaysHeader = new Label { Text = "TIMERS & DELAY (SECONDS)", ForeColor = Color.FromArgb(148, 163, 184), Location = new Point(20, top), AutoSize = true, Font = new Font("Segoe UI", 8F, FontStyle.Bold) };
-            top += 22;
-
-            int colW = 85;
-            Label l1 = new Label { Text = "DELAY", ForeColor = Color.Gray, Location = new Point(20, top), Size = new Size(colW, 15), Font = new Font("Segoe UI", 7.5F) };
-            Label l2 = new Label { Text = "OPEN RBLX", ForeColor = Color.Gray, Location = new Point(115, top), Size = new Size(colW, 15), Font = new Font("Segoe UI", 7.5F) };
-            Label l3 = new Label { Text = "OFFLINETIME", ForeColor = Color.Gray, Location = new Point(210, top), Size = new Size(colW, 15), Font = new Font("Segoe UI", 7.5F) };
-            top += 18;
-
-            txtDelay = new TextBox { Text = "5", Location = new Point(20, top), Size = new Size(colW, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, TextAlign = HorizontalAlignment.Center };
-            txtDelayOpenRblx = new TextBox { Text = "10", Location = new Point(115, top), Size = new Size(colW, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, TextAlign = HorizontalAlignment.Center };
-            txtOfflineTime = new TextBox { Text = "60", Location = new Point(210, top), Size = new Size(colW, 25), BackColor = Color.FromArgb(30, 35, 50), ForeColor = Color.White, TextAlign = HorizontalAlignment.Center };
-
-            rightControlPanel.Controls.AddRange(new Control[] { lblDelaysHeader, l1, l2, l3, txtDelay, txtDelayOpenRblx, txtOfflineTime });
         }
 
         private void ListViewAccounts_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdateSelectedFooter();
+
+            if (listViewAccounts.SelectedItems.Count == 1)
+            {
+                ListViewItem selectedItem = listViewAccounts.SelectedItems[0];
+                if (selectedItem.SubItems.Count > 1)
+                {
+                    string username = selectedItem.SubItems[1].Text;
+                    var acc = AccountManager.AccountsList?.FirstOrDefault(a => a.Username == username);
+                    if (acc != null)
+                    {
+                        string pId = acc.GetField("SavedPlaceId");
+                        if (string.IsNullOrEmpty(pId)) pId = AccountManager.CurrentPlaceId ?? "2753915549";
+                        txtPlaceId.Text = pId;
+
+                        string jId = acc.GetField("SavedJobId");
+                        txtJobId.Text = string.IsNullOrEmpty(jId) ? "None" : jId;
+                    }
+                }
+            }
         }
 
         private void UpdateSelectedFooter()
@@ -356,28 +438,39 @@ namespace RBX_Alt_Manager.Nexus
             lblSelectedCount.Text = $"เลือกอยู่ {selectedCount} รายการ / ทั้งหมด {totalCount} รายการ";
         }
 
-        public void RefreshAccountsList()
+        public void UpdateRealTimeStatus()
         {
-            if (AccountManager.AccountsList == null) return;
+            if (AccountManager.AccountsList == null || listViewAccounts == null) return;
 
-            listViewAccounts.Items.Clear();
-            int index = 1;
-            int idle = 0, online = 0, offline = 0;
-
-            // Only accounts marked for Rejoin ("AddToRelaunch" == "true") or all accounts if none marked
             var relaunchAccounts = AccountManager.AccountsList.Where(a => a.GetField("AddToRelaunch") == "true").ToList();
             if (relaunchAccounts.Count == 0) relaunchAccounts = AccountManager.AccountsList;
 
-            foreach (var acc in relaunchAccounts)
+            if (listViewAccounts.Items.Count != relaunchAccounts.Count)
             {
-                var rbxProc = RobloxWatcher.Instances.FirstOrDefault(rp =>
+                RefreshAccountsList();
+                return;
+            }
+
+            int idle = 0, online = 0, offline = 0;
+            var allRbxProcs = System.Diagnostics.Process.GetProcessesByName("RobloxPlayerBeta");
+
+            for (int i = 0; i < relaunchAccounts.Count; i++)
+            {
+                var acc = relaunchAccounts[i];
+                var item = listViewAccounts.Items[i];
+
+                System.Diagnostics.Process rbxProc = null;
+                if (!string.IsNullOrEmpty(acc.BrowserTrackerID))
                 {
-                    try { return rp.RbxProcess != null && !rp.RbxProcess.HasExited && rp.RbxProcess.GetCommandLine().Contains(acc.BrowserTrackerID); } catch { return false; }
-                });
+                    rbxProc = allRbxProcs.FirstOrDefault(p =>
+                    {
+                        try { return !p.HasExited && p.GetCommandLine().Contains(acc.BrowserTrackerID); }
+                        catch { return false; }
+                    });
+                }
 
-                bool isRunning = rbxProc != null && !rbxProc.RbxProcess.HasExited;
+                bool isRunning = rbxProc != null && !rbxProc.HasExited;
 
-                // Status definition: ONLINE (Running), OFFLINE (Explicit offline/error if offline field set), IDLE (Paused/Waiting)
                 string statusText = "IDLE";
                 if (isRunning)
                 {
@@ -395,21 +488,107 @@ namespace RBX_Alt_Manager.Nexus
                     idle++;
                 }
 
-                string pidText = isRunning ? rbxProc.RbxProcess.Id.ToString() : "-";
+                string pidText = isRunning ? rbxProc.Id.ToString() : "-";
                 string uptimeText = "-";
                 if (isRunning)
                 {
-                    TimeSpan duration = DateTime.Now - rbxProc.RbxProcess.StartTime;
-                    uptimeText = duration.TotalHours >= 1 ? $"{(int)duration.TotalHours}h {duration.Minutes}m" : $"{duration.Minutes}m {duration.Seconds}s";
+                    try
+                    {
+                        TimeSpan duration = DateTime.Now - rbxProc.StartTime;
+                        uptimeText = duration.TotalHours >= 1
+                            ? $"{(int)duration.TotalHours}h {duration.Minutes:D2}m {duration.Seconds:D2}s"
+                            : $"{duration.Minutes:D2}m {duration.Seconds:D2}s";
+                    }
+                    catch { }
                 }
 
                 string savedPlaceId = acc.GetField("SavedPlaceId") ?? txtPlaceId?.Text ?? "2753915549";
-                string savedJobId = acc.GetField("SavedJobId") ?? txtJobId?.Text ?? "None";
+                string savedJobId = acc.GetField("SavedJobId") ?? txtJobId?.Text ?? "";
+                if (string.IsNullOrEmpty(savedJobId)) savedJobId = "None";
+
+                if (item.SubItems.Count >= 7)
+                {
+                    if (item.SubItems[1].Text != acc.Username) item.SubItems[1].Text = acc.Username;
+                    if (item.SubItems[2].Text != savedPlaceId) item.SubItems[2].Text = savedPlaceId;
+                    if (item.SubItems[3].Text != savedJobId) item.SubItems[3].Text = savedJobId;
+                    if (item.SubItems[4].Text != statusText) item.SubItems[4].Text = statusText;
+                    if (item.SubItems[5].Text != pidText) item.SubItems[5].Text = pidText;
+                    if (item.SubItems[6].Text != uptimeText) item.SubItems[6].Text = uptimeText;
+                }
+            }
+
+            if (panelIdleCard?.Controls.Count > 0 && panelIdleCard.Controls[0] is Label lIdle) lIdle.Text = $"IDLE {idle}";
+            if (panelOnlineCard?.Controls.Count > 0 && panelOnlineCard.Controls[0] is Label lOnline) lOnline.Text = $"ONLINE {online}";
+            if (panelOfflineCard?.Controls.Count > 0 && panelOfflineCard.Controls[0] is Label lOffline) lOffline.Text = $"OFFLINE {offline}";
+
+            listViewAccounts.Invalidate();
+        }
+
+        public void RefreshAccountsList()
+        {
+            if (AccountManager.AccountsList == null) return;
+
+            listViewAccounts.Items.Clear();
+            int index = 1;
+            int idle = 0, online = 0, offline = 0;
+            var allRbxProcs = System.Diagnostics.Process.GetProcessesByName("RobloxPlayerBeta");
+
+            var relaunchAccounts = AccountManager.AccountsList.Where(a => a.GetField("AddToRelaunch") == "true").ToList();
+            if (relaunchAccounts.Count == 0) relaunchAccounts = AccountManager.AccountsList;
+
+            foreach (var acc in relaunchAccounts)
+            {
+                System.Diagnostics.Process rbxProc = null;
+                if (!string.IsNullOrEmpty(acc.BrowserTrackerID))
+                {
+                    rbxProc = allRbxProcs.FirstOrDefault(p =>
+                    {
+                        try { return !p.HasExited && p.GetCommandLine().Contains(acc.BrowserTrackerID); }
+                        catch { return false; }
+                    });
+                }
+
+                bool isRunning = rbxProc != null && !rbxProc.HasExited;
+
+                string statusText = "IDLE";
+                if (isRunning)
+                {
+                    statusText = "ONLINE";
+                    online++;
+                }
+                else if (acc.GetField("Status")?.ToUpper() == "OFFLINE" || acc.GetField("IsOffline") == "true")
+                {
+                    statusText = "OFFLINE";
+                    offline++;
+                }
+                else
+                {
+                    statusText = "IDLE";
+                    idle++;
+                }
+
+                string pidText = isRunning ? rbxProc.Id.ToString() : "-";
+                string uptimeText = "-";
+                if (isRunning)
+                {
+                    try
+                    {
+                        TimeSpan duration = DateTime.Now - rbxProc.StartTime;
+                        uptimeText = duration.TotalHours >= 1
+                            ? $"{(int)duration.TotalHours}h {duration.Minutes:D2}m {duration.Seconds:D2}s"
+                            : $"{duration.Minutes:D2}m {duration.Seconds:D2}s";
+                    }
+                    catch { }
+                }
+
+                string savedPlaceId = acc.GetField("SavedPlaceId") ?? txtPlaceId?.Text ?? "2753915549";
+                string savedJobId = acc.GetField("SavedJobId") ?? txtJobId?.Text ?? "";
+                if (string.IsNullOrEmpty(savedJobId)) savedJobId = "None";
 
                 ListViewItem item = new ListViewItem(index.ToString());
                 item.SubItems.Add(acc.Username);
                 item.SubItems.Add(savedPlaceId);
-                item.SubItems.Add(string.IsNullOrEmpty(savedJobId) ? "None" : savedJobId);
+                item.SubItems.Add(savedJobId);
                 item.SubItems.Add(statusText);
                 item.SubItems.Add(pidText);
                 item.SubItems.Add(uptimeText);
@@ -418,9 +597,9 @@ namespace RBX_Alt_Manager.Nexus
                 index++;
             }
 
-            if (panelIdleCard?.Controls[0] is Label lIdle) lIdle.Text = $"IDLE {idle}";
-            if (panelOnlineCard?.Controls[0] is Label lOnline) lOnline.Text = $"ONLINE {online}";
-            if (panelOfflineCard?.Controls[0] is Label lOffline) lOffline.Text = $"OFFLINE {offline}";
+            if (panelIdleCard?.Controls.Count > 0 && panelIdleCard.Controls[0] is Label lIdle) lIdle.Text = $"IDLE {idle}";
+            if (panelOnlineCard?.Controls.Count > 0 && panelOnlineCard.Controls[0] is Label lOnline) lOnline.Text = $"ONLINE {online}";
+            if (panelOfflineCard?.Controls.Count > 0 && panelOfflineCard.Controls[0] is Label lOffline) lOffline.Text = $"OFFLINE {offline}";
 
             UpdateSelectedFooter();
         }
@@ -481,53 +660,35 @@ namespace RBX_Alt_Manager.Nexus
 
         private void ListViewAccounts_DrawItem(object sender, DrawListViewItemEventArgs e)
         {
-            string statusStr = e.Item.SubItems.Count > 4 ? e.Item.SubItems[4].Text : "IDLE";
             bool isSelected = e.Item.Selected;
 
-            Color statusColor;
-            Color bgColor;
-            Color borderColor;
-
-            if (statusStr == "ONLINE")
-            {
-                statusColor = Color.FromArgb(34, 197, 94); // Green
-                bgColor = Color.FromArgb(20, 36, 28);
-                borderColor = Color.FromArgb(34, 197, 94);
-            }
-            else if (statusStr == "OFFLINE")
-            {
-                statusColor = Color.FromArgb(239, 68, 68); // Red
-                bgColor = Color.FromArgb(38, 22, 26);
-                borderColor = Color.FromArgb(239, 68, 68);
-            }
-            else // IDLE
-            {
-                statusColor = Color.FromArgb(234, 179, 8); // Yellow
-                bgColor = Color.FromArgb(35, 32, 22);
-                borderColor = Color.FromArgb(234, 179, 8);
-            }
+            int rowIdx = e.Item.Index;
+            Color bgColor = (rowIdx % 2 == 0) ? Color.FromArgb(18, 22, 34) : Color.FromArgb(24, 28, 42);
 
             if (isSelected)
             {
-                bgColor = Color.FromArgb(
-                    Math.Min(255, bgColor.R + 25),
-                    Math.Min(255, bgColor.G + 25),
-                    Math.Min(255, bgColor.B + 35)
-                );
+                bgColor = Color.FromArgb(32, 48, 78);
             }
 
             // Fill row background frame
-            Rectangle rowBounds = new Rectangle(e.Bounds.X + 2, e.Bounds.Y + 1, e.Bounds.Width - 4, e.Bounds.Height - 2);
+            Rectangle rowBounds = new Rectangle(e.Bounds.X, e.Bounds.Y, e.Bounds.Width, e.Bounds.Height);
             using (SolidBrush rowBrush = new SolidBrush(bgColor))
             {
                 e.Graphics.FillRectangle(rowBrush, rowBounds);
             }
 
-            // Draw status accent frame / border (thick border when Selected)
-            int borderWidth = isSelected ? 2 : 1;
-            using (Pen borderPen = new Pen(isSelected ? Color.FromArgb(0, 242, 254) : Color.FromArgb(40, borderColor), borderWidth))
+            if (isSelected)
             {
-                e.Graphics.DrawRectangle(borderPen, rowBounds);
+                using (Pen borderPen = new Pen(Color.FromArgb(0, 242, 254), 1.5f))
+                {
+                    e.Graphics.DrawRectangle(borderPen, rowBounds.X + 1, rowBounds.Y + 1, rowBounds.Width - 2, rowBounds.Height - 2);
+                }
+            }
+
+            // Bottom gridline
+            using (Pen gridPen = new Pen(Color.FromArgb(15, 255, 255, 255), 1f))
+            {
+                e.Graphics.DrawLine(gridPen, e.Bounds.X, e.Bounds.Bottom - 1, e.Bounds.Right, e.Bounds.Bottom - 1);
             }
         }
 
@@ -539,27 +700,36 @@ namespace RBX_Alt_Manager.Nexus
             if (e.ColumnIndex == 4) // Status Column
             {
                 Color badgeColor;
-                string iconText;
+                string labelText;
 
                 if (statusStr == "ONLINE")
                 {
                     badgeColor = Color.FromArgb(34, 197, 94); // Green
-                    iconText = "🟢 ONLINE";
+                    labelText = "ONLINE";
                 }
                 else if (statusStr == "OFFLINE")
                 {
                     badgeColor = Color.FromArgb(239, 68, 68); // Red
-                    iconText = "🔴 OFFLINE";
+                    labelText = "OFFLINE";
                 }
                 else // IDLE
                 {
                     badgeColor = Color.FromArgb(234, 179, 8); // Yellow
-                    iconText = "🟡 IDLE";
+                    labelText = "IDLE";
+                }
+
+                int dotX = e.Bounds.X + 8;
+                int dotY = e.Bounds.Y + (e.Bounds.Height - 8) / 2;
+                using (SolidBrush dotBrush = new SolidBrush(badgeColor))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    e.Graphics.FillEllipse(dotBrush, dotX, dotY, 8, 8);
                 }
 
                 using (SolidBrush textBrush = new SolidBrush(badgeColor))
+                using (Font font = new Font("Segoe UI", 9F, FontStyle.Bold))
                 {
-                    e.Graphics.DrawString(iconText, new Font("Segoe UI", 9F, FontStyle.Bold), textBrush, e.Bounds.X + 6, e.Bounds.Y + 4);
+                    e.Graphics.DrawString(labelText, font, textBrush, dotX + 14, e.Bounds.Y + 4);
                 }
             }
             else

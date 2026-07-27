@@ -690,6 +690,15 @@ namespace RBX_Alt_Manager
             ApplyTheme();
             SetupModernDashboardLayout();
 
+            realTimeUiTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            realTimeUiTimer.Tick += (s, e) =>
+            {
+                UpdateKpis();
+                AccountsView?.Invalidate();
+                autoRejoinControl?.UpdateRealTimeStatus();
+            };
+            realTimeUiTimer.Start();
+
             RGForm.RecentGameSelected += (sender, e) => { PlaceID.Text = e.Game.Details?.placeId.ToString(); };
 
             PlaceID.Text = General.Exists("SavedPlaceId") ? General.Get("SavedPlaceId") : "5315046213";
@@ -868,6 +877,11 @@ namespace RBX_Alt_Manager
 
             ControlForm?.ApplyTheme();
             SettingsForm?.ApplyTheme();
+
+            if (isModernLayoutBuilt)
+            {
+                ApplyModernDashboardTheme();
+            }
         }
 
         private async void LoadRecentGames()
@@ -2015,7 +2029,6 @@ namespace RBX_Alt_Manager
                 };
                 ControlForm.Show();
                 ControlForm.ApplyTheme();
-            SetupModernDashboardLayout();
             }
         }
 
@@ -2225,20 +2238,41 @@ namespace RBX_Alt_Manager
         private Label kpiFarmingVal;
         private Label kpiRobuxVal;
         private Label kpiDeadVal;
+        private System.Windows.Forms.Timer realTimeUiTimer;
 
         private Label lblMenuMain;
         private Label lblMenuSystem;
         private Button navAccountsBtn;
-        private Button navServerBtn;
         private Button navUtilsBtn;
         private Button navSettingsBtn;
-        private Button navSecurityBtn;
+        private Button currentActiveNavBtn;
+        private Button settingsToggleBtn;
+        private Button btnMin;
+        private Button btnMax;
+        private Button btnClose;
+        private Panel logoBox;
+        private Label logoText;
 
         private Label cardTitleLabel;
         private Label lblPlaceID;
         private Label lblJobID;
         private Label lblAlias;
         private Label lblDescription;
+
+        public static string GetAppVersion()
+        {
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                var fvi = FileVersionInfo.GetVersionInfo(asm.Location);
+                if (!string.IsNullOrEmpty(fvi.FileVersion)) return fvi.FileVersion;
+                return asm.GetName().Version?.ToString() ?? "3.6.2.0";
+            }
+            catch
+            {
+                return "3.6.2.0";
+            }
+        }
 
         private bool isModernLayoutBuilt = false;
 
@@ -2251,7 +2285,7 @@ namespace RBX_Alt_Manager
                 this.FormBorderStyle = FormBorderStyle.None;
                 this.Size = new Size(1280, 820);
                 this.MinimumSize = new Size(1020, 680);
-                this.Text = "NTG Manager 2026 - Modern Glassmorphism";
+                this.Text = $"NTG Manager 2026 v{GetAppVersion()} - Modern Glassmorphism";
                 this.BackColor = Color.FromArgb(8, 9, 15);
                 this.ForeColor = Color.FromArgb(240, 243, 254);
 
@@ -2302,13 +2336,13 @@ namespace RBX_Alt_Manager
                 };
                 brandPanel.MouseDown += titleDragDown;
 
-                Panel logoBox = new Panel()
+                logoBox = new Panel()
                 {
                     Size = new Size(38, 38),
                     Location = new Point(0, 1),
                     BackColor = Color.FromArgb(0, 242, 254)
                 };
-                Label logoText = new Label()
+                logoText = new Label()
                 {
                     Text = "NTG",
                     Font = new Font("Segoe UI", 11F, FontStyle.Bold),
@@ -2330,7 +2364,7 @@ namespace RBX_Alt_Manager
 
                 brandTagLabel = new Label()
                 {
-                    Text = LanguageManager.GetText("BrandTag"),
+                    Text = $"v{GetAppVersion()} " + LanguageManager.GetText("BrandTag"),
                     Font = new Font("Segoe UI", 7.5F, FontStyle.Bold),
                     ForeColor = Color.FromArgb(0, 242, 254),
                     BackColor = Color.FromArgb(30, 0, 242, 254),
@@ -2349,7 +2383,7 @@ namespace RBX_Alt_Manager
                 {
                     Text = LanguageManager.GetText("LangButton"),
                     Size = new Size(130, 32),
-                    Location = new Point(topHeaderPanel.Width - 280, 14),
+                    Location = new Point(topHeaderPanel.Width - 245, 14),
                     Anchor = AnchorStyles.Top | AnchorStyles.Right,
                     BackColor = Color.FromArgb(25, 30, 48),
                     ForeColor = Color.FromArgb(0, 242, 254),
@@ -2364,22 +2398,6 @@ namespace RBX_Alt_Manager
                     UpdateLanguageStrings();
                 };
 
-                // Settings Toggle Button ⚙️
-                Button settingsToggleBtn = new Button()
-                {
-                    Text = "⚙️",
-                    Size = new Size(32, 32),
-                    Location = new Point(topHeaderPanel.Width - 145, 14),
-                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                    BackColor = Color.FromArgb(25, 30, 48),
-                    ForeColor = Color.FromArgb(180, 190, 220),
-                    FlatStyle = FlatStyle.Flat,
-                    Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                    Cursor = Cursors.Hand
-                };
-                settingsToggleBtn.FlatAppearance.BorderColor = Color.FromArgb(40, 255, 255, 255);
-                settingsToggleBtn.Click += (s, e) => rightDetailsCard.Visible = !rightDetailsCard.Visible;
-
                 // Custom Window Controls (Minimize, Maximize, Close)
                 Panel windowControls = new Panel()
                 {
@@ -2389,7 +2407,7 @@ namespace RBX_Alt_Manager
                     BackColor = Color.Transparent
                 };
 
-                Button btnMin = new Button()
+                btnMin = new Button()
                 {
                     Text = "─",
                     Size = new Size(30, 30),
@@ -2403,7 +2421,7 @@ namespace RBX_Alt_Manager
                 btnMin.FlatAppearance.BorderSize = 0;
                 btnMin.Click += (s, e) => this.WindowState = FormWindowState.Minimized;
 
-                Button btnMax = new Button()
+                btnMax = new Button()
                 {
                     Text = "❐",
                     Size = new Size(30, 30),
@@ -2417,7 +2435,7 @@ namespace RBX_Alt_Manager
                 btnMax.FlatAppearance.BorderSize = 0;
                 btnMax.Click += (s, e) => this.WindowState = (this.WindowState == FormWindowState.Maximized) ? FormWindowState.Normal : FormWindowState.Maximized;
 
-                Button btnClose = new Button()
+                btnClose = new Button()
                 {
                     Text = "✕",
                     Size = new Size(30, 30),
@@ -2437,7 +2455,6 @@ namespace RBX_Alt_Manager
 
                 topHeaderPanel.Controls.Add(brandPanel);
                 topHeaderPanel.Controls.Add(langSwitchBtn);
-                topHeaderPanel.Controls.Add(settingsToggleBtn);
                 topHeaderPanel.Controls.Add(windowControls);
 
                 // 2. Left Sidebar Navigation
@@ -2459,22 +2476,19 @@ namespace RBX_Alt_Manager
                 };
 
                 navAccountsBtn = CreateNavButton(LanguageManager.GetText("NavAccounts"), 38, true);
-                navServerBtn = CreateNavButton(LanguageManager.GetText("NavGames"), 80, false);
-                navUtilsBtn = CreateNavButton(LanguageManager.GetText("NavAutoJoiner"), 122, false);
-                Button navVipBtn = CreateNavButton(LanguageManager.GetText("NavVipServers"), 164, false);
+                navUtilsBtn = CreateNavButton(LanguageManager.GetText("NavAutoJoiner"), 80, false);
 
                 lblMenuSystem = new Label()
                 {
                     Text = LanguageManager.GetText("MenuSystem"),
                     Font = new Font("Segoe UI", 8F, FontStyle.Bold),
                     ForeColor = Color.FromArgb(123, 132, 163),
-                    Location = new Point(12, 220),
+                    Location = new Point(12, 136),
                     AutoSize = true
                 };
 
-                navSecurityBtn = CreateNavButton(LanguageManager.GetText("NavSecurity"), 243, false);
-                navWatcherBtn = CreateNavButton(LanguageManager.GetText("NavWatcher"), 285, false);
-                navSettingsBtn = CreateNavButton(LanguageManager.GetText("NavSettings"), 327, false);
+                navWatcherBtn = CreateNavButton(LanguageManager.GetText("NavWatcher"), 159, false);
+                navSettingsBtn = CreateNavButton(LanguageManager.GetText("NavSettings"), 201, false);
 
                 autoRejoinControl = new AutoRejoinControl()
                 {
@@ -2494,16 +2508,10 @@ namespace RBX_Alt_Manager
                     Visible = false
                 };
 
-                navServerBtn.Click += (s, e) => { ResetNavButtons(navServerBtn); ServerList_Click(s, e); };
-                navSecurityBtn.Click += (s, e) => { ResetNavButtons(navSecurityBtn); ConfigButton_Click(s, e); };
-
                 mainSidebarPanel.Controls.Add(lblMenuMain);
                 mainSidebarPanel.Controls.Add(navAccountsBtn);
-                mainSidebarPanel.Controls.Add(navServerBtn);
                 mainSidebarPanel.Controls.Add(navUtilsBtn);
-                mainSidebarPanel.Controls.Add(navVipBtn);
                 mainSidebarPanel.Controls.Add(lblMenuSystem);
-                mainSidebarPanel.Controls.Add(navSecurityBtn);
                 mainSidebarPanel.Controls.Add(navWatcherBtn);
                 mainSidebarPanel.Controls.Add(navSettingsBtn);
 
@@ -2730,7 +2738,7 @@ namespace RBX_Alt_Manager
                 {
                     Text = LanguageManager.GetText("BtnRefreshAvatars"),
                     Size = new Size(130, 32),
-                    Location = new Point(tableActionHeader.Width - 280, 5),
+                    Location = new Point(tableActionHeader.Width - 321, 5),
                     Anchor = AnchorStyles.Top | AnchorStyles.Right,
                     BackColor = Color.FromArgb(25, 30, 48),
                     ForeColor = Color.FromArgb(240, 243, 254),
@@ -2745,7 +2753,7 @@ namespace RBX_Alt_Manager
                 {
                     Text = LanguageManager.GetText("BtnAddAccount"),
                     Size = new Size(145, 32),
-                    Location = new Point(tableActionHeader.Width - 145, 5),
+                    Location = new Point(tableActionHeader.Width - 186, 5),
                     Anchor = AnchorStyles.Top | AnchorStyles.Right,
                     BackColor = Color.FromArgb(0, 242, 254),
                     ForeColor = Color.Black,
@@ -2756,9 +2764,27 @@ namespace RBX_Alt_Manager
                 addAccountButton.FlatAppearance.BorderSize = 0;
                 addAccountButton.Click += (s, e) => AddAccountsStrip.Show(addAccountButton, new Point(0, addAccountButton.Height));
 
+                // Quick Launch & Details Toggle Button ⚙️
+                settingsToggleBtn = new Button()
+                {
+                    Text = "⚙️",
+                    Size = new Size(36, 32),
+                    Location = new Point(tableActionHeader.Width - 36, 5),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                    BackColor = Color.FromArgb(25, 30, 48),
+                    ForeColor = Color.FromArgb(0, 242, 254),
+                    FlatStyle = FlatStyle.Flat,
+                    Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                    Cursor = Cursors.Hand
+                };
+                settingsToggleBtn.FlatAppearance.BorderColor = Color.FromArgb(60, 0, 242, 254);
+                settingsToggleBtn.Click += (s, e) => rightDetailsCard.Visible = !rightDetailsCard.Visible;
+                settingsToggleBtn.MakeRounded(8);
+
                 tableActionHeader.Controls.Add(globalSearchBox);
                 tableActionHeader.Controls.Add(refreshAvatarsButton);
                 tableActionHeader.Controls.Add(addAccountButton);
+                tableActionHeader.Controls.Add(settingsToggleBtn);
 
                 bottomActionFooterPanel = new Panel()
                 {
@@ -2987,9 +3013,23 @@ namespace RBX_Alt_Manager
 
             if (AccountsList != null)
             {
+                var rbxProcesses = System.Diagnostics.Process.GetProcessesByName("RobloxPlayerBeta");
                 foreach (var acc in AccountsList)
                 {
-                    if (acc.Valid && acc.Presence?.userPresenceType == UserPresenceType.InGame) farming++;
+                    bool isProcRunning = false;
+                    if (!string.IsNullOrEmpty(acc.BrowserTrackerID))
+                    {
+                        isProcRunning = rbxProcesses.Any(p =>
+                        {
+                            try { return !p.HasExited && p.GetCommandLine().Contains(acc.BrowserTrackerID); }
+                            catch { return false; }
+                        });
+                    }
+
+                    if (isProcRunning || (acc.Valid && (acc.Presence?.userPresenceType == UserPresenceType.InGame || acc.Presence?.userPresenceType == UserPresenceType.Online)))
+                    {
+                        farming++;
+                    }
                 }
             }
 
@@ -3002,7 +3042,7 @@ namespace RBX_Alt_Manager
             try
             {
                 brandTitleLabel.Text = LanguageManager.GetText("AppTitle");
-                brandTagLabel.Text = LanguageManager.GetText("BrandTag");
+                brandTagLabel.Text = $"v{GetAppVersion()} " + LanguageManager.GetText("BrandTag");
                 langSwitchBtn.Text = LanguageManager.GetText("LangButton");
                 globalSearchBox.PlaceholderText = LanguageManager.GetText("BtnSearchPlaceholder");
 
@@ -3010,9 +3050,7 @@ namespace RBX_Alt_Manager
                 lblMenuSystem.Text = LanguageManager.GetText("MenuSystem");
 
                 navAccountsBtn.Text = LanguageManager.GetText("NavAccounts");
-                navServerBtn.Text = LanguageManager.GetText("NavGames");
                 navUtilsBtn.Text = LanguageManager.GetText("NavAutoJoiner");
-                navSecurityBtn.Text = LanguageManager.GetText("NavSecurity");
                 if (navWatcherBtn != null) navWatcherBtn.Text = LanguageManager.GetText("NavWatcher");
                 navSettingsBtn.Text = LanguageManager.GetText("NavSettings");
 
@@ -3066,16 +3104,94 @@ namespace RBX_Alt_Manager
 
         private void ResetNavButtons(Button activeBtn)
         {
+            if (activeBtn != null) currentActiveNavBtn = activeBtn;
+            if (mainSidebarPanel == null) return;
             foreach (Control c in mainSidebarPanel.Controls)
             {
                 if (c is Button b)
                 {
                     bool isActive = (b == activeBtn);
+                    b.FlatStyle = FlatStyle.Flat;
+                    b.FlatAppearance.BorderSize = 0;
                     b.Font = new Font("Segoe UI", 9.5F, isActive ? FontStyle.Bold : FontStyle.Regular);
                     b.BackColor = isActive ? Color.FromArgb(25, 30, 48) : Color.Transparent;
                     b.ForeColor = isActive ? Color.FromArgb(0, 242, 254) : Color.FromArgb(123, 132, 163);
                 }
             }
+        }
+
+        public void ApplyModernDashboardTheme()
+        {
+            if (!isModernLayoutBuilt) return;
+
+            this.BackColor = Color.FromArgb(8, 9, 15);
+            this.ForeColor = Color.FromArgb(240, 243, 254);
+
+            if (mainSidebarPanel != null)
+            {
+                mainSidebarPanel.BackColor = Color.FromArgb(10, 12, 20);
+                if (lblMenuMain != null) lblMenuMain.ForeColor = Color.FromArgb(123, 132, 163);
+                if (lblMenuSystem != null) lblMenuSystem.ForeColor = Color.FromArgb(123, 132, 163);
+                ResetNavButtons(currentActiveNavBtn ?? navAccountsBtn);
+            }
+
+            if (topHeaderPanel != null)
+            {
+                topHeaderPanel.BackColor = Color.FromArgb(13, 16, 26);
+                if (brandTitleLabel != null) brandTitleLabel.ForeColor = Color.White;
+                if (brandTagLabel != null)
+                {
+                    brandTagLabel.ForeColor = Color.FromArgb(0, 242, 254);
+                    brandTagLabel.BackColor = Color.FromArgb(30, 0, 242, 254);
+                }
+                if (logoBox != null) logoBox.BackColor = Color.FromArgb(0, 242, 254);
+                if (logoText != null)
+                {
+                    logoText.ForeColor = Color.Black;
+                    logoText.BackColor = Color.Transparent;
+                }
+                if (langSwitchBtn != null)
+                {
+                    langSwitchBtn.BackColor = Color.FromArgb(25, 30, 48);
+                    langSwitchBtn.ForeColor = Color.FromArgb(0, 242, 254);
+                    langSwitchBtn.FlatStyle = FlatStyle.Flat;
+                    langSwitchBtn.FlatAppearance.BorderSize = 1;
+                    langSwitchBtn.FlatAppearance.BorderColor = Color.FromArgb(60, 0, 242, 254);
+                }
+                if (settingsToggleBtn != null)
+                {
+                    settingsToggleBtn.BackColor = Color.FromArgb(25, 30, 48);
+                    settingsToggleBtn.ForeColor = Color.FromArgb(180, 190, 220);
+                    settingsToggleBtn.FlatStyle = FlatStyle.Flat;
+                    settingsToggleBtn.FlatAppearance.BorderSize = 1;
+                    settingsToggleBtn.FlatAppearance.BorderColor = Color.FromArgb(40, 255, 255, 255);
+                }
+                if (btnMin != null)
+                {
+                    btnMin.BackColor = Color.FromArgb(25, 30, 48);
+                    btnMin.ForeColor = Color.FromArgb(180, 190, 220);
+                    btnMin.FlatStyle = FlatStyle.Flat;
+                    btnMin.FlatAppearance.BorderSize = 0;
+                }
+                if (btnMax != null)
+                {
+                    btnMax.BackColor = Color.FromArgb(25, 30, 48);
+                    btnMax.ForeColor = Color.FromArgb(180, 190, 220);
+                    btnMax.FlatStyle = FlatStyle.Flat;
+                    btnMax.FlatAppearance.BorderSize = 0;
+                }
+                if (btnClose != null)
+                {
+                    btnClose.BackColor = Color.FromArgb(220, 30, 70);
+                    btnClose.ForeColor = Color.White;
+                    btnClose.FlatStyle = FlatStyle.Flat;
+                    btnClose.FlatAppearance.BorderSize = 0;
+                }
+            }
+
+            if (rightDetailsCard != null) rightDetailsCard.BackColor = Color.FromArgb(13, 16, 26);
+            if (kpiRowPanel != null) kpiRowPanel.BackColor = Color.Transparent;
+            if (bottomActionFooterPanel != null) bottomActionFooterPanel.BackColor = Color.Transparent;
         }
     }
 }
