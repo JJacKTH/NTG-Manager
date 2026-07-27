@@ -61,10 +61,15 @@ namespace RBX_Alt_Manager.Nexus
         private OpenFileDialog CustomClientSettingsDialog;
 
         private ToolTip Helper;
-        private NBTabControl SettingsTC;
-        private TabPage GeneralTab;
-        private TabPage DeveloperTab;
-        private TabPage MiscellaneousTab;
+        private Panel tabHeaderPanel;
+        private Button btnTabGeneral;
+        private Button btnTabDeveloper;
+        private Button btnTabMisc;
+
+        private Panel mainContentContainer;
+        private Panel panelGeneralContent;
+        private Panel panelDeveloperContent;
+        private Panel panelMiscContent;
 
         public SettingsControl()
         {
@@ -82,24 +87,84 @@ namespace RBX_Alt_Manager.Nexus
             this.Controls.Clear();
             Helper = new ToolTip();
 
-            SettingsTC = new NBTabControl
+            // 1. Top Sub-Tab Navigation Header
+            tabHeaderPanel = new Panel
             {
-                Dock = DockStyle.Fill
+                Dock = DockStyle.Top,
+                Height = 44,
+                BackColor = Color.FromArgb(20, 24, 36),
+                Padding = new Padding(12, 6, 12, 6)
             };
 
-            GeneralTab = new TabPage("General") { BackColor = Color.FromArgb(15, 17, 26), Padding = new Padding(12) };
-            DeveloperTab = new TabPage("Developer") { BackColor = Color.FromArgb(15, 17, 26), Padding = new Padding(12) };
-            MiscellaneousTab = new TabPage("Miscellaneous") { BackColor = Color.FromArgb(15, 17, 26), Padding = new Padding(12) };
+            btnTabGeneral = CreateSubTabButton("⚙️ General Settings", 0);
+            btnTabDeveloper = CreateSubTabButton("💻 Developer & WebServer", 165);
+            btnTabMisc = CreateSubTabButton("🛠️ Miscellaneous", 365);
 
-            BuildGeneralTab();
-            BuildDeveloperTab();
-            BuildMiscellaneousTab();
+            btnTabGeneral.Click += (s, e) => SwitchTab(0);
+            btnTabDeveloper.Click += (s, e) => SwitchTab(1);
+            btnTabMisc.Click += (s, e) => SwitchTab(2);
 
-            SettingsTC.TabPages.Add(GeneralTab);
-            SettingsTC.TabPages.Add(DeveloperTab);
-            SettingsTC.TabPages.Add(MiscellaneousTab);
+            tabHeaderPanel.Controls.Add(btnTabGeneral);
+            tabHeaderPanel.Controls.Add(btnTabDeveloper);
+            tabHeaderPanel.Controls.Add(btnTabMisc);
 
-            this.Controls.Add(SettingsTC);
+            // 2. Main Content Container
+            mainContentContainer = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(15, 17, 26)
+            };
+
+            panelGeneralContent = BuildGeneralTab();
+            panelDeveloperContent = BuildDeveloperTab();
+            panelMiscContent = BuildMiscellaneousTab();
+
+            mainContentContainer.Controls.Add(panelGeneralContent);
+            mainContentContainer.Controls.Add(panelDeveloperContent);
+            mainContentContainer.Controls.Add(panelMiscContent);
+
+            this.Controls.Add(mainContentContainer);
+            this.Controls.Add(tabHeaderPanel);
+
+            SwitchTab(0);
+        }
+
+        private Button CreateSubTabButton(string text, int x)
+        {
+            Button btn = new Button
+            {
+                Text = text,
+                Location = new Point(x, 6),
+                Size = new Size(155, 32),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                BackColor = Color.Transparent,
+                ForeColor = Color.FromArgb(148, 163, 184)
+            };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.MakeRounded(8);
+            return btn;
+        }
+
+        private void SwitchTab(int tabIndex)
+        {
+            btnTabGeneral.BackColor = tabIndex == 0 ? Color.FromArgb(45, 52, 75) : Color.Transparent;
+            btnTabGeneral.ForeColor = tabIndex == 0 ? Color.FromArgb(0, 242, 254) : Color.FromArgb(148, 163, 184);
+
+            btnTabDeveloper.BackColor = tabIndex == 1 ? Color.FromArgb(45, 52, 75) : Color.Transparent;
+            btnTabDeveloper.ForeColor = tabIndex == 1 ? Color.FromArgb(0, 242, 254) : Color.FromArgb(148, 163, 184);
+
+            btnTabMisc.BackColor = tabIndex == 2 ? Color.FromArgb(45, 52, 75) : Color.Transparent;
+            btnTabMisc.ForeColor = tabIndex == 2 ? Color.FromArgb(0, 242, 254) : Color.FromArgb(148, 163, 184);
+
+            panelGeneralContent.Visible = tabIndex == 0;
+            panelDeveloperContent.Visible = tabIndex == 1;
+            panelMiscContent.Visible = tabIndex == 2;
+
+            if (tabIndex == 0) panelGeneralContent.BringToFront();
+            else if (tabIndex == 1) panelDeveloperContent.BringToFront();
+            else if (tabIndex == 2) panelMiscContent.BringToFront();
         }
 
         private Panel CreateMainScrollContainer()
@@ -151,7 +216,7 @@ namespace RBX_Alt_Manager.Nexus
             };
         }
 
-        private void BuildGeneralTab()
+        private Panel BuildGeneralTab()
         {
             Panel container = CreateMainScrollContainer();
             int top = 10;
@@ -279,10 +344,10 @@ namespace RBX_Alt_Manager.Nexus
             card2.Controls.AddRange(new Control[] { RegionFormatLabel, RegionFormatTB, MRGLabel, MaxRecentGamesNumber, themeLabel, themeCombo, EncryptionSelectionButton, RSLabel });
             container.Controls.Add(card2);
 
-            GeneralTab.Controls.Add(container);
+            return container;
         }
 
-        private void BuildDeveloperTab()
+        private Panel BuildDeveloperTab()
         {
             Panel container = CreateMainScrollContainer();
             int top = 10;
@@ -357,10 +422,10 @@ namespace RBX_Alt_Manager.Nexus
             card1.Controls.AddRange(new Control[] { EnableDMCB, EnableWSCB, PortLabel, PortNumber, ERRPCB, AllowGCCB, AllowGACB, AllowLACB, AllowAECB, DisableImagesCB, AllowExternalConnectionsCB, WSPWLabel, PasswordTextBox });
             container.Controls.Add(card1);
 
-            DeveloperTab.Controls.Add(container);
+            return container;
         }
 
-        private void BuildMiscellaneousTab()
+        private Panel BuildMiscellaneousTab()
         {
             Panel container = CreateMainScrollContainer();
             int top = 10;
@@ -447,7 +512,7 @@ namespace RBX_Alt_Manager.Nexus
             card1.Controls.AddRange(new Control[] { PresenceCB, PresenceUpdateLabel, PresenceUpdateRateNum, UnlockFPSCB, FPSCapLabel, MaxFPSValue, OverrideWithCustomCB, ForceUpdateButton });
             container.Controls.Add(card1);
 
-            MiscellaneousTab.Controls.Add(container);
+            return container;
         }
 
         public void LoadSettings()
