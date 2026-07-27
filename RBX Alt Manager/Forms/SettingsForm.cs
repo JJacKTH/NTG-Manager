@@ -91,6 +91,39 @@ namespace RBX_Alt_Manager.Forms
             SettingsLayoutPanel.Controls.Add(themeLabel);
             SettingsLayoutPanel.Controls.Add(themeCombo);
 
+            // Add clear tooltips explaining each feature
+            Helper.SetToolTip(AutoUpdateCB, "ตรวจสอบการอัปเดตโปรแกรมใหม่อัตโนมัติเมื่อเปิดใช้งาน");
+            Helper.SetToolTip(AsyncJoinCB, "เปิดใช้งานการรันล็อกอินหลายไอดีแบบขนาน (Async) ลดเวลารอระหว่างเข้าเกม");
+            Helper.SetToolTip(LaunchDelayNumber, "ระยะเวลารอ (วินาที) ก่อนเริ่มเปิดล็อกอินเข้าเกมในไอดีถัดไป");
+            Helper.SetToolTip(SavePasswordCB, "บันทึกรหัสผ่านบัญชีเก็บไว้ในไฟล์ระบบอย่างปลอดภัย");
+            Helper.SetToolTip(DisableAgingAlertCB, "ปิดการแจ้งเตือนสัญลักษณ์แจ้งเตือนไอดีไม่ได้เข้าใช้นาน (Aging Dots)");
+            Helper.SetToolTip(HideMRobloxCB, "ปิดการแสดงป๊อปอัปเตือนเรื่อง Multi Roblox");
+            Helper.SetToolTip(StartOnPCStartup, "สั่งให้โปรแกรมเปิดทำงานอัตโนมัติเมื่อเปิดคอมพิวเตอร์ (Windows Startup)");
+            Helper.SetToolTip(ShuffleLowestServerCB, "สุ่มเลือกเซิร์ฟเวอร์ที่มีจำนวนผู้เล่นน้อยที่สุด เพื่อลดความแออัด");
+            Helper.SetToolTip(MultiRobloxCB, "อนุญาตให้เปิดโปรแกรมเกม Roblox พร้อมกันได้หลายๆ จอ/ไอดี");
+            Helper.SetToolTip(RegionFormatTB, "รูปแบบการแสดงผลภูมิภาคของเซิร์ฟเวอร์ (เช่น <city>, <countryCode>)");
+            Helper.SetToolTip(MaxRecentGamesNumber, "จำนวนเกมล่าสุดสูงสุดที่จะแสดงในรายการประวัติ");
+            Helper.SetToolTip(EncryptionSelectionButton, "รีเซ็ตและเปลี่ยนวิธีการเข้ารหัสผ่านบัญชีเพื่อความปลอดภัยสูงสุด");
+            Helper.SetToolTip(themeCombo, "เลือกโทนสีและดีไซน์หน้าตาโปรแกรมตามธีมพรีเซ็ต");
+
+            Helper.SetToolTip(EnableDMCB, "เปิดโหมดนักพัฒนาเพื่อเข้าถึงเมนูและคำสั่งขั้นสูง");
+            Helper.SetToolTip(EnableWSCB, "เปิดใช้งาน Web Server ในตัวสำหรับให้สคริปต์ภายนอกหรือบอทเชื่อมต่อเข้ามาได้");
+            Helper.SetToolTip(PortNumber, "หมายเลขพอร์ต HTTP WebServer (ค่าเริ่มต้นคือ 7963)");
+            Helper.SetToolTip(ERRPCB, "บังคับให้ต้องส่ง WebServer Password ในทุกคำสั่ง API เพื่อความปลอดภัย");
+            Helper.SetToolTip(AllowGCCB, "อนุญาตให้ API ภายนอกดึงข้อมูล Cookie บัญชีได้");
+            Helper.SetToolTip(AllowGACB, "อนุญาตให้ API ภายนอกดึงรายชื่อบัญชีทั้งหมดได้");
+            Helper.SetToolTip(AllowLACB, "อนุญาตให้ API ภายนอกสั่งรันเข้าเกมในไอดีที่ต้องการได้");
+            Helper.SetToolTip(AllowAECB, "อนุญาตให้ API ภายนอกแก้ไขข้อมูลบัญชีได้");
+            Helper.SetToolTip(DisableImagesCB, "ปิดการโหลดภาพรูปโปรไฟล์เพื่อประหยัดหน่วยความจำ RAM");
+            Helper.SetToolTip(AllowExternalConnectionsCB, "อนุญาตให้เครื่องอื่นในเครือข่าย LAN/Internet เชื่อมต่อมายัง WebServer ได้");
+
+            Helper.SetToolTip(PresenceCB, "แสดงสถานะการใช้งานไอดีย้อนหลังสดใหม่ (In-Game / Online / Offline)");
+            Helper.SetToolTip(PresenceUpdateRateNum, "ความถี่ในการอัปเดตสถานะบัญชี (นาที)");
+            Helper.SetToolTip(UnlockFPSCB, "ปลดล็อกเฟรมเรตเกม Roblox ให้สูงกว่า 60 FPS");
+            Helper.SetToolTip(MaxFPSValue, "กำหนดขีดจำกัด FPS สูงสุดของ Roblox");
+            Helper.SetToolTip(OverrideWithCustomCB, "ใช้ไฟล์คอนฟิก ClientAppSettings.json แบบกำหนดเองสำหรับ Roblox");
+            Helper.SetToolTip(ForceUpdateButton, "บังคับดาวน์โหลดและอัปเดตโปรแกรมเป็นเวอร์ชันล่าสุดทันที");
+
             ApplyTheme();
         }
 
