@@ -2818,6 +2818,7 @@ namespace RBX_Alt_Manager
 
                 autoRejoinControl.Parent = centerContentPanel;
                 watcherControl.Parent = centerContentPanel;
+                settingsControl.Parent = centerContentPanel;
 
                 centerContentPanel.Controls.Add(AccountsView);
                 centerContentPanel.Controls.Add(tableActionHeader);
@@ -2825,6 +2826,7 @@ namespace RBX_Alt_Manager
                 centerContentPanel.Controls.Add(bottomActionFooterPanel);
                 centerContentPanel.Controls.Add(autoRejoinControl);
                 centerContentPanel.Controls.Add(watcherControl);
+                centerContentPanel.Controls.Add(settingsControl);
 
                 this.Controls.Add(centerContentPanel);
                 this.Controls.Add(rightDetailsCard);
